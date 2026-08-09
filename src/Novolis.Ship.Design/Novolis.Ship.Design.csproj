@@ -2,18 +2,14 @@
   <PropertyGroup>
     <PackageId>Novolis.Ship.Design</PackageId>
     <IsPackable>true</IsPackable>
-    <Description>Object-first ship design model: ShipDesign graph with per-object CadDocument construction, structure factory, cutouts, and scene evaluation.</Description>
+    <Description>Object-first ship design model: ShipDesign graph with per-object CadDocument construction, structure factory, and cutout relationships.</Description>
     <RootNamespace>Novolis.Ship.Design</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Novolis.Cad.Primitives" />
-    <PackageReference Include="Novolis.Cad.Evaluation" />
-    <PackageReference Include="Novolis.Cad.SceneBridge" />
-    <PackageReference Include="Novolis.Math.Geometry" />
     <PackageReference Include="Novolis.Math.Measure" />
-    <PackageReference Include="Novolis.3D.Scene" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Novolis.Ship.Primitives\Novolis.Ship.Primitives.csproj" />

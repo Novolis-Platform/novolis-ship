@@ -68,15 +68,6 @@ public sealed class ShipDesignTests
     }
 
     [Test]
-    public async Task Evaluate_produces_scene_meshes()
-    {
-        var design = ShipFactory.Create(SampleDefinition());
-        var result = ShipDesignEvaluator.Evaluate(design);
-        await Assert.That(result.ObjectMeshes.Count).IsGreaterThan(0);
-        await Assert.That(result.Scene.Nodes.Count).IsGreaterThan(1);
-    }
-
-    [Test]
     public async Task Projector_to_cad_and_back_keeps_envelope()
     {
         var design = ShipFactory.Create(SampleDefinition());

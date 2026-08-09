@@ -33,7 +33,7 @@ Schema: `novolis-governance/schemas/ship/novolis.ship.schema.json`.
 - Object-first ship design (hull, decks, frames, longitudinals, bulkheads, compartments, passages, openings, equipment).
 - Every geometric object owns a `CadDocument` construction graph.
 - Structural cutouts are relationships, regenerated from functional sources.
-- Evaluation produces meshes / `SceneDocument` without rendering in ship packages.
+- Scene mesh evaluation is composed in `Novolis.Avalonia.Ship.Design` (Cad.Evaluation / 3D.Scene), not in Avalonia-free ship packages.
 
 ## Non-goals
 

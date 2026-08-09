@@ -236,7 +236,7 @@ public static class ShipWalk
 
         BoundsOf(startSpace, out var smin, out var smax);
         var startHint = startAtAft
-            ? new Vector3((smin.X + smax.X) * 0.5f, FloorY(startSpace) + eyeHeight, Math.Min(smin.Z, smax.Z) + DefaultInset)
+            ? new Vector3((smin.X + smax.X) * 0.5f, FloorY(startSpace) + eyeHeight, System.Math.Min(smin.Z, smax.Z) + DefaultInset)
             : SpaceCentroid(startSpace);
         var cursor = ClampToSpace(startSpace, startHint, DefaultInset);
         waypoints.Add(new ShipWalkWaypoint(
@@ -384,11 +384,11 @@ public static class ShipWalk
     {
         var floor = FloorY(corr);
         BoundsOf(corr, out var min, out var max);
-        var yCl = Math.Clamp((min.X + max.X) * 0.5f, min.X + DefaultInset, max.X - DefaultInset);
-        var zAft = Math.Min(min.Z, max.Z) + DefaultInset;
-        var zBow = Math.Max(min.Z, max.Z) - DefaultInset;
+        var yCl = System.Math.Clamp((min.X + max.X) * 0.5f, min.X + DefaultInset, max.X - DefaultInset);
+        var zAft = System.Math.Min(min.Z, max.Z) + DefaultInset;
+        var zBow = System.Math.Max(min.Z, max.Z) - DefaultInset;
         var z = waypoints.Count > 0
-            ? Math.Clamp(waypoints[^1].Eye.Z, Math.Min(zAft, zBow), Math.Max(zAft, zBow))
+            ? System.Math.Clamp(waypoints[^1].Eye.Z, System.Math.Min(zAft, zBow), System.Math.Max(zAft, zBow))
             : zAft;
         var dir = zBow >= z ? 1 : -1;
         var targetZ = dir > 0 ? zBow : zAft;
@@ -468,11 +468,11 @@ public static class ShipWalk
         if (loZ > hiZ)
             loZ = hiZ = (min.Z + max.Z) * 0.5f;
         var floor = min.Y;
-        var ceil = floor + Math.Max(1.8f, space.Height > 0 ? space.Height : 3.2f);
+        var ceil = floor + System.Math.Max(1.8f, space.Height > 0 ? space.Height : 3.2f);
         return new Vector3(
-            Math.Clamp(p.X, loX, hiX),
-            Math.Clamp(p.Y, floor + 1.2f, ceil - 0.35f),
-            Math.Clamp(p.Z, loZ, hiZ));
+            System.Math.Clamp(p.X, loX, hiX),
+            System.Math.Clamp(p.Y, floor + 1.2f, ceil - 0.35f),
+            System.Math.Clamp(p.Z, loZ, hiZ));
     }
 
     private static Vector3 ForwardHint(CadEntity space)
@@ -499,7 +499,7 @@ public static class ShipWalk
             return;
         }
 
-        var steps = Math.Max(1, (int)MathF.Ceiling(dist / Math.Max(0.25f, step)));
+        var steps = System.Math.Max(1, (int)MathF.Ceiling(dist / System.Math.Max(0.25f, step)));
         for (var i = 1; i <= steps; i++)
         {
             var t = i / (float)steps;
