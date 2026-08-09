@@ -8,11 +8,17 @@
     <PackageReference Include="JetBrains.Annotations" />
     <PackageReference Include="TUnit" />
     <PackageReference Include="Novolis.Cad.Primitives" />
+    <PackageReference Include="Novolis.Cad.Evaluation" />
+    <PackageReference Include="Novolis.Cad.SceneBridge" />
+    <PackageReference Include="Novolis.Math.Geometry" />
+    <PackageReference Include="Novolis.Math.Measure" />
+    <PackageReference Include="Novolis.3D.Scene" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Novolis.Ship.Primitives/Novolis.Ship.Primitives.csproj" />
     <ProjectReference Include="../../src/Novolis.Ship.Topology/Novolis.Ship.Topology.csproj" />
     <ProjectReference Include="../../src/Novolis.Ship.Validation/Novolis.Ship.Validation.csproj" />
     <ProjectReference Include="../../src/Novolis.Ship.Structure/Novolis.Ship.Structure.csproj" />
+    <ProjectReference Include="../../src/Novolis.Ship.Design/Novolis.Ship.Design.csproj" />
   </ItemGroup>
 </Project>

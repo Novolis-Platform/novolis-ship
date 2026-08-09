@@ -9,5 +9,10 @@
     <PackageVersion Include="TUnit" Version="1.44.39" />
     <PackageVersion Include="Novolis.Analyzers.StackBoundaries" Version="2026.1.*" />
     <PackageVersion Include="Novolis.Cad.Primitives" Version="2026.1.*" />
+    <PackageVersion Include="Novolis.Cad.Evaluation" Version="2026.1.*" />
+    <PackageVersion Include="Novolis.Cad.SceneBridge" Version="2026.1.*" />
+    <PackageVersion Include="Novolis.Math.Geometry" Version="2026.1.*" />
+    <PackageVersion Include="Novolis.Math.Measure" Version="2026.1.*" />
+    <PackageVersion Include="Novolis.3D.Scene" Version="2026.1.*" />
   </ItemGroup>
 </Project>

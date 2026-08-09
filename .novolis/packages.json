@@ -39,6 +39,16 @@
         "global.json"
       ],
       "project": "src/Novolis.Ship.Structure/Novolis.Ship.Structure.csproj"
+    },
+    "Novolis.Ship.Design": {
+      "paths": [
+        "src/Novolis.Ship.Design/**",
+        "tests/Novolis.Ship.Unit/**",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "global.json"
+      ],
+      "project": "src/Novolis.Ship.Design/Novolis.Ship.Design.csproj"
     }
   }
 }
