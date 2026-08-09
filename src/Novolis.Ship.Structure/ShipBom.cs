@@ -15,6 +15,6 @@ public sealed class ShipBom
 
     public float TotalMassKg =>
         Lines.Count > 0
-            ? Lines.Sum(l => l.MassKg * Math.Max(1, l.Qty))
+            ? Lines.Sum(l => l.MassKg * System.Math.Max(1, l.Qty))
             : SkinMass?.MassKg ?? 0f;
 }
