@@ -5,6 +5,57 @@ namespace Novolis.Ship.Design;
 /// <summary>Creates an immediately valid <see cref="ShipDesign"/> from a definition (structure-first).</summary>
 public static class ShipFactory
 {
+    /// <summary>Empty design for clean-slate UI (no structure until Create / New Ship).</summary>
+    public static ShipDesign CreateBlank()
+    {
+        var now = DateTimeOffset.UtcNow.ToString("O");
+        var empty = new Novolis.Cad.Primitives.CadDocument { Name = "blank", Entities = [] };
+        var definition = new ShipDefinition
+        {
+            Name = "",
+            Length = ShipLengths.FromMeters(1f),
+            Beam = ShipLengths.FromMeters(1f),
+            Height = ShipLengths.FromMeters(1f),
+            DeckCount = 1,
+            DeckSpacing = ShipLengths.FromMeters(4f),
+            HullMaterial = MaterialId.Steel,
+            PrimaryStructuralMaterial = MaterialId.Steel,
+            HullThickness = ShipLengths.FromMeters(0.024f),
+            FrameSpacing = ShipLengths.FromMeters(1.5f),
+            HullGenerator = HullGeneratorKind.Faceted,
+            GravitySystem = GravitySystemKind.Plating,
+            NominalGravityG = 1f,
+            NominalInternalPressureAtm = 1f,
+            ExternalEnvironment = ExternalEnvironmentKind.Vacuum,
+        };
+        return new ShipDesign
+        {
+            SchemaVersion = ShipDesign.CurrentSchemaVersion,
+            CreatedAt = now,
+            ModifiedAt = now,
+            Ship = definition,
+            Hull = new HullDesign
+            {
+                Id = HullId.New(),
+                Geometry = empty,
+                Material = MaterialId.Steel,
+                Thickness = definition.HullThickness,
+                Generator = HullGeneratorKind.Faceted,
+            },
+            Decks = [],
+            Frames = [],
+            Longitudinals = [],
+            Bulkheads = [],
+            Compartments = [],
+            Passages = [],
+            Openings = [],
+            Equipment = [],
+            Environment = ShipEnvironment.FromDefinition(definition),
+            LoadCases = ShipLoadCase.CreateBaseline(),
+            Cutouts = [],
+        };
+    }
+
     public static ShipDesign Create(ShipDefinition definition)
     {
         ArgumentNullException.ThrowIfNull(definition);

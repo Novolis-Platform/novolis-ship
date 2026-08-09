@@ -1,3 +1,4 @@
+using Novolis.Cad.Primitives;
 using Novolis.Ship.Structure;
 
 namespace Novolis.Ship.Design;
@@ -88,6 +89,141 @@ public static class ShipDesignMutations
             ModifiedAt = DateTimeOffset.UtcNow.ToString("O"),
         };
         return StructuralCutoutService.Regenerate(next);
+    }
+
+    public static ShipDesign AddBulkhead(
+        ShipDesign design,
+        DeckId deckId,
+        string name,
+        IReadOnlyList<float[]> pathXz,
+        float thicknessM,
+        float heightM,
+        bool isPrimary = false)
+    {
+        ArgumentNullException.ThrowIfNull(design);
+        var deck = design.Decks.FirstOrDefault(d => d.Id.Value == deckId.Value)
+            ?? throw new ArgumentException("Deck not found.", nameof(deckId));
+        var elev = ShipLengths.ToMeters(deck.Elevation);
+        var material = design.Ship.PrimaryStructuralMaterial.Value is { Length: > 0 } m
+            ? m
+            : design.Ship.HullMaterial.Value;
+        var bulkhead = new BulkheadDesign
+        {
+            Id = BulkheadId.New(),
+            Name = name,
+            Material = new MaterialId(material),
+            Thickness = ShipLengths.FromMeters(thicknessM),
+            Height = ShipLengths.FromMeters(heightM),
+            DeckId = deckId,
+            IsPrimary = isPrimary,
+            Geometry = ShipGeometryBuilders.BuildBulkheadPath(
+                name, pathXz, thicknessM, heightM, elev, material, deck.Index),
+        };
+        return design with
+        {
+            Bulkheads = design.Bulkheads.Append(bulkhead).ToList(),
+            ModifiedAt = DateTimeOffset.UtcNow.ToString("O"),
+        };
+    }
+
+    public static ShipDesign AddEquipment(
+        ShipDesign design,
+        string name,
+        float[] center,
+        float[] halfExtents,
+        float massKg = 500f)
+    {
+        ArgumentNullException.ThrowIfNull(design);
+        var equipment = new EquipmentDesign
+        {
+            Id = EquipmentId.New(),
+            Name = name,
+            MassKg = massKg,
+            ServiceClearance = ShipLengths.FromMeters(0.6f),
+            Geometry = ShipGeometryBuilders.BuildEquipmentEnvelope(name, center, halfExtents, massKg),
+        };
+        return design with
+        {
+            Equipment = design.Equipment.Append(equipment).ToList(),
+            ModifiedAt = DateTimeOffset.UtcNow.ToString("O"),
+        };
+    }
+
+    public static ShipDesign ReplaceObjectGeometry(ShipDesign design, ShipObjectId id, CadDocument geometry)
+    {
+        ArgumentNullException.ThrowIfNull(design);
+        ArgumentNullException.ThrowIfNull(geometry);
+        var clone = CloneDocument(geometry);
+        var guid = id.Value;
+        if (design.Hull.Id.Value == guid)
+            return design with { Hull = design.Hull with { Geometry = clone }, ModifiedAt = Now() };
+        if (design.Decks.Any(d => d.Id.Value == guid))
+            return design with
+            {
+                Decks = design.Decks.Select(d => d.Id.Value == guid ? d with { Geometry = clone } : d).ToList(),
+                ModifiedAt = Now(),
+            };
+        if (design.Frames.Any(f => f.Id.Value == guid))
+            return design with
+            {
+                Frames = design.Frames.Select(f => f.Id.Value == guid ? f with { Geometry = clone } : f).ToList(),
+                ModifiedAt = Now(),
+            };
+        if (design.Longitudinals.Any(l => l.Id.Value == guid))
+            return design with
+            {
+                Longitudinals = design.Longitudinals.Select(l => l.Id.Value == guid ? l with { Geometry = clone } : l).ToList(),
+                ModifiedAt = Now(),
+            };
+        if (design.Bulkheads.Any(b => b.Id.Value == guid))
+            return design with
+            {
+                Bulkheads = design.Bulkheads.Select(b => b.Id.Value == guid ? b with { Geometry = clone } : b).ToList(),
+                ModifiedAt = Now(),
+            };
+        if (design.Compartments.Any(c => c.Id.Value == guid))
+            return design with
+            {
+                Compartments = design.Compartments.Select(c => c.Id.Value == guid ? c with { Geometry = clone } : c).ToList(),
+                ModifiedAt = Now(),
+            };
+        if (design.Passages.Any(p => p.Id.Value == guid))
+        {
+            var next = design with
+            {
+                Passages = design.Passages.Select(p => p.Id.Value == guid ? p with { Geometry = clone } : p).ToList(),
+                ModifiedAt = Now(),
+            };
+            return StructuralCutoutService.Regenerate(next);
+        }
+
+        if (design.Openings.Any(o => o.Id.Value == guid))
+        {
+            var next = design with
+            {
+                Openings = design.Openings.Select(o => o.Id.Value == guid ? o with { Geometry = clone } : o).ToList(),
+                ModifiedAt = Now(),
+            };
+            return StructuralCutoutService.Regenerate(next);
+        }
+
+        if (design.Equipment.Any(e => e.Id.Value == guid))
+            return design with
+            {
+                Equipment = design.Equipment.Select(e => e.Id.Value == guid ? e with { Geometry = clone } : e).ToList(),
+                ModifiedAt = Now(),
+            };
+
+        return design;
+    }
+
+    private static string Now() => DateTimeOffset.UtcNow.ToString("O");
+
+    private static CadDocument CloneDocument(CadDocument source)
+    {
+        var json = System.Text.Json.JsonSerializer.Serialize(source);
+        return System.Text.Json.JsonSerializer.Deserialize<CadDocument>(json)
+               ?? new CadDocument { Name = source.Name };
     }
 
     public static ShipDesign SetDeckElevation(ShipDesign design, DeckId deckId, float elevationM)

@@ -125,6 +125,34 @@ public sealed class ShipDesignTests
     }
 
     [Test]
+    public async Task Blank_has_no_structure_until_create()
+    {
+        var blank = ShipFactory.CreateBlank();
+        await Assert.That(blank.Hull.Geometry.Entities.Count).IsEqualTo(0);
+        await Assert.That(blank.Decks.Count).IsEqualTo(0);
+        await Assert.That(blank.Frames.Count).IsEqualTo(0);
+        await Assert.That(string.IsNullOrEmpty(blank.Ship.Name)).IsTrue();
+    }
+
+    [Test]
+    public async Task Mutations_add_bulkhead_opening_and_equipment()
+    {
+        var design = ShipFactory.Create(SampleDefinition());
+        var deck = design.Decks[1];
+        design = ShipDesignMutations.AddBulkhead(
+            design, deck.Id, "BH-Extra", [[-6f, 2f], [6f, 2f]], 0.08f, 3.5f);
+        await Assert.That(design.Bulkheads.Count).IsEqualTo(4);
+        var host = design.Bulkheads[^1].Id.AsObject();
+        design = ShipDesignMutations.AddOpening(
+            design, host, "Door-1", OpeningKind.Door, 0.9f, 2f, [0f, 4f, 2f]);
+        await Assert.That(design.Openings.Count).IsEqualTo(1);
+        design = ShipDesignMutations.AddEquipment(
+            design, "Pump", [1f, 4f, 0f], [0.5f, 0.5f, 0.5f], 120f);
+        await Assert.That(design.Equipment.Count).IsEqualTo(1);
+        await Assert.That(design.Equipment[0].MassKg).IsEqualTo(120f);
+    }
+
+    [Test]
     public async Task Shared_compartment_edges_are_detected()
     {
         var design = ShipFactory.Create(SampleDefinition());
