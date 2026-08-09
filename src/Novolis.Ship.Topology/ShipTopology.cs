@@ -28,7 +28,8 @@ public static class ShipTopology
     /// Graph: spaces are nodes. Closed airtight openings between two spaces (via host wall sides)
     /// are sealed edges. Open or non-airtight openings, or openings without a host wall, vent
     /// touching spaces to exterior. A closed airtight hatch on a wall touched by only one space
-    /// is treated as an exterior hatch (vents that space).
+    /// is an exterior hatch that seals that space against vacuum (does not vent). An open or
+    /// non-airtight exterior hatch vents the single touching space.
     /// </summary>
     public static ShipTopologyResult Analyze(CadDocument document)
     {
@@ -81,12 +82,7 @@ public static class ShipTopology
                 }
             }
 
-            // Exterior hatch: only one compartment on the host wall.
-            if (list.Count <= 1)
-            {
-                foreach (var sid in list)
-                    venting.Add(sid);
-            }
+            // Closed airtight exterior hatch (one compartment): seals against vacuum — do not vent.
         }
 
         var sealedIds = spaceIds.Where(id => !venting.Contains(id)).ToHashSet();

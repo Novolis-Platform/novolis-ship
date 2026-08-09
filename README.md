@@ -39,9 +39,10 @@ Avalonia-free ship CAD domain for Novolis freighters and decked vessels.
 
 | Package | Role |
 |---------|------|
-| `Novolis.Ship.Primitives` | Pressure volumes, airlocks, hatch property helpers |
+| `Novolis.Ship.Primitives` | Pressure volumes, airlocks, hatch property helpers (incl. vacuum-assisted seals) |
 | `Novolis.Ship.Topology` | Compartment airtightness graph |
 | `Novolis.Ship.Validation` | Clearance / airlock / envelope rules |
+| `Novolis.Ship.Structure` | Plate material specs, BOM lines, outer-skin mass rollup |
 
 Product host: **Ship Designer** in `novolis-apps`. UI chrome: `Novolis.Avalonia.Ship`. Cad interchange: `Novolis.Cad.Primitives` + governance schemas.
 

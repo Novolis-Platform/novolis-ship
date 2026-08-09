@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>Novolis.Ship.Structure</PackageId>
+    <IsPackable>true</IsPackable>
+    <Description>Ship structural plate material specs, BOM lines, and outer-skin mass rollup for Cad documents.</Description>
+    <RootNamespace>Novolis.Ship.Structure</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Novolis.Cad.Primitives" />
+    <ProjectReference Include="..\Novolis.Ship.Primitives\Novolis.Ship.Primitives.csproj" />
+  </ItemGroup>
+</Project>

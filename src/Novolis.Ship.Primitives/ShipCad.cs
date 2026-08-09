@@ -87,6 +87,63 @@ public static class ShipCad
             opening.Height = clearHeight;
     }
 
+    /// <summary>
+    /// Tags a hatch that seals tighter under outboard vacuum: pressure-assisted leaf, opens inboard,
+    /// seal face outboard. Sets <see cref="ShipPressureClass.Vacuum"/> and airtight-when-closed.
+    /// </summary>
+    public static void TagVacuumAssistedHatch(
+        CadEntity opening,
+        float clearWidth,
+        float clearHeight,
+        float sillHeight = 0.15f,
+        ShipLeafState leafState = ShipLeafState.Closed)
+    {
+        TagOpeningPressure(
+            opening,
+            ShipPressureClass.Vacuum,
+            clearWidth,
+            clearHeight,
+            sillHeight,
+            airtightWhenClosed: true,
+            leafState);
+        opening.Properties![ShipPropertyKeys.SealAssist] =
+            JsonSerializer.SerializeToElement(nameof(ShipSealAssist.PressureAssist));
+        opening.Properties[ShipPropertyKeys.HingeBias] =
+            JsonSerializer.SerializeToElement(nameof(ShipHingeBias.OpensInboard));
+        opening.Properties[ShipPropertyKeys.SealFace] =
+            JsonSerializer.SerializeToElement(nameof(ShipSealFace.Outboard));
+    }
+
+    /// <summary>
+    /// Contact pressure (kPa) that seats the leaf onto the seal from cabin vs exterior absolute pressures.
+    /// Positive when cabin pressure exceeds exterior (vacuum outside tightens the seal).
+    /// </summary>
+    public static float SealContactPressureKPa(float cabinKPa, float exteriorKPa) =>
+        cabinKPa - exteriorKPa;
+
+    public static ShipSealAssist GetSealAssist(CadEntity opening)
+    {
+        var raw = GetString(opening.Properties, ShipPropertyKeys.SealAssist, nameof(ShipSealAssist.None));
+        return Enum.TryParse<ShipSealAssist>(raw, ignoreCase: true, out var v) ? v : ShipSealAssist.None;
+    }
+
+    public static ShipHingeBias GetHingeBias(CadEntity opening)
+    {
+        var raw = GetString(opening.Properties, ShipPropertyKeys.HingeBias, nameof(ShipHingeBias.Neutral));
+        return Enum.TryParse<ShipHingeBias>(raw, ignoreCase: true, out var v) ? v : ShipHingeBias.Neutral;
+    }
+
+    public static ShipSealFace GetSealFace(CadEntity opening)
+    {
+        var raw = GetString(opening.Properties, ShipPropertyKeys.SealFace, nameof(ShipSealFace.Neutral));
+        return Enum.TryParse<ShipSealFace>(raw, ignoreCase: true, out var v) ? v : ShipSealFace.Neutral;
+    }
+
+    public static bool IsVacuumAssisted(CadEntity opening) =>
+        GetSealAssist(opening) == ShipSealAssist.PressureAssist
+        && GetHingeBias(opening) == ShipHingeBias.OpensInboard
+        && GetSealFace(opening) == ShipSealFace.Outboard;
+
     public static bool TryReadPressureVolume(CadEntity entity, out PressureVolumeInfo info)
     {
         info = null!;

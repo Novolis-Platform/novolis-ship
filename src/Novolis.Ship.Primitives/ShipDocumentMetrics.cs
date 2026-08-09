@@ -6,7 +6,7 @@ namespace Novolis.Ship.Primitives;
 /// <summary>Read/write ship metrics on <see cref="CadDocument.Properties"/>.</summary>
 public static class ShipDocumentMetrics
 {
-    public static float GetLoaMeters(CadDocument document, float fallback = 65f) =>
+    public static float GetLoaMeters(CadDocument document, float fallback = 69f) =>
         GetFloat(document.Properties, ShipPropertyKeys.ShipLoaMeters, fallback);
 
     public static float GetBeamMeters(CadDocument document, float fallback = 20f) =>

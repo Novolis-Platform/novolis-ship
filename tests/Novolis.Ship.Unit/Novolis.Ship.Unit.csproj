@@ -13,5 +13,6 @@
     <ProjectReference Include="../../src/Novolis.Ship.Primitives/Novolis.Ship.Primitives.csproj" />
     <ProjectReference Include="../../src/Novolis.Ship.Topology/Novolis.Ship.Topology.csproj" />
     <ProjectReference Include="../../src/Novolis.Ship.Validation/Novolis.Ship.Validation.csproj" />
+    <ProjectReference Include="../../src/Novolis.Ship.Structure/Novolis.Ship.Structure.csproj" />
   </ItemGroup>
 </Project>

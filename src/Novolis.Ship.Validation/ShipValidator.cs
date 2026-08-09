@@ -59,6 +59,21 @@ public static class ShipValidator
                     $"Opening '{opening.Name ?? opening.Id.ToString("N")[..8]}' has no host wall.",
                     opening.Id));
             }
+
+            var pressureClassRaw = opening.Properties is not null
+                && opening.Properties.TryGetValue(ShipPropertyKeys.PressureClass, out var pcEl)
+                && pcEl.ValueKind == System.Text.Json.JsonValueKind.String
+                    ? pcEl.GetString()
+                    : null;
+            var isVacuumClass = string.Equals(pressureClassRaw, nameof(ShipPressureClass.Vacuum), StringComparison.OrdinalIgnoreCase);
+            if (isVacuumClass && !ShipCad.IsVacuumAssisted(opening))
+            {
+                issues.Add(new ShipValidationIssue(
+                    "SHIP_VACUUM_SEAL",
+                    ShipValidationSeverity.Warning,
+                    $"Vacuum-class hatch '{opening.Name ?? opening.Id.ToString("N")[..8]}' should use pressure-assist seal (sealAssist/hingeBias/sealFace).",
+                    opening.Id));
+            }
         }
 
         foreach (var oid in topology.OrphanOpeningIds)
