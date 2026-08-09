@@ -105,15 +105,26 @@ public static class ShipDesignMutations
         IReadOnlyList<float[]> pathXz,
         float thicknessM,
         float heightM,
+        bool isPrimary = false) =>
+        AddBulkheadPath(design, deckId, name, pathXz, thicknessM, heightM, isPrimary);
+
+    /// <summary>Architect wall stroke → bulkhead on a deck.</summary>
+    public static ShipDesign AddBulkheadPath(
+        ShipDesign design,
+        DeckId deckId,
+        string name,
+        IReadOnlyList<float[]> pathXz,
+        float thicknessM,
+        float heightM,
         bool isPrimary = false)
     {
         ArgumentNullException.ThrowIfNull(design);
-        var deck = design.Decks.FirstOrDefault(d => d.Id.Value == deckId.Value)
-            ?? throw new ArgumentException("Deck not found.", nameof(deckId));
+        ArgumentNullException.ThrowIfNull(pathXz);
+        if (pathXz.Count < 2)
+            throw new ArgumentException("Bulkhead path needs at least 2 points.", nameof(pathXz));
+        var deck = RequireDeck(design, deckId);
         var elev = ShipLengths.ToMeters(deck.Elevation);
-        var material = design.Ship.PrimaryStructuralMaterial.Value is { Length: > 0 } m
-            ? m
-            : design.Ship.HullMaterial.Value;
+        var material = StructuralMaterial(design);
         var bulkhead = new BulkheadDesign
         {
             Id = BulkheadId.New(),
@@ -129,9 +140,187 @@ public static class ShipDesignMutations
         return design with
         {
             Bulkheads = design.Bulkheads.Append(bulkhead).ToList(),
-            ModifiedAt = DateTimeOffset.UtcNow.ToString("O"),
+            ModifiedAt = Now(),
         };
     }
+
+    public static ShipDesign UpdateBulkheadPath(ShipDesign design, BulkheadId bulkheadId, IReadOnlyList<float[]> pathXz)
+    {
+        ArgumentNullException.ThrowIfNull(design);
+        ArgumentNullException.ThrowIfNull(pathXz);
+        if (pathXz.Count < 2)
+            throw new ArgumentException("Bulkhead path needs at least 2 points.", nameof(pathXz));
+        var bulkheads = design.Bulkheads.Select(b =>
+        {
+            if (b.Id.Value != bulkheadId.Value)
+                return b;
+            var deck = b.DeckId is { } did ? design.Decks.FirstOrDefault(d => d.Id.Value == did.Value) : null;
+            var elev = deck is null ? 0f : ShipLengths.ToMeters(deck.Elevation);
+            var deckIndex = deck?.Index ?? 0;
+            return b with
+            {
+                Geometry = ShipGeometryBuilders.BuildBulkheadPath(
+                    b.Name,
+                    pathXz,
+                    ShipLengths.ToMeters(b.Thickness),
+                    ShipLengths.ToMeters(b.Height),
+                    elev,
+                    b.Material.Value,
+                    deckIndex),
+            };
+        }).ToList();
+        return design with { Bulkheads = bulkheads, ModifiedAt = Now() };
+    }
+
+    public static ShipDesign AppendBulkheadVertex(ShipDesign design, BulkheadId bulkheadId, float x, float z)
+    {
+        ArgumentNullException.ThrowIfNull(design);
+        var bh = design.Bulkheads.FirstOrDefault(b => b.Id.Value == bulkheadId.Value)
+            ?? throw new ArgumentException("Bulkhead not found.", nameof(bulkheadId));
+        var path = ShipPlanPaths.ExtractPathXz(bh.Geometry);
+        path.Add([x, z]);
+        return UpdateBulkheadPath(design, bulkheadId, path);
+    }
+
+    /// <summary>Architect room polygon → compartment; ensures shared-edge bulkheads exist.</summary>
+    public static ShipDesign AddCompartmentPolygon(
+        ShipDesign design,
+        DeckId deckId,
+        string name,
+        IReadOnlyList<float[]> closedPolyXz,
+        CompartmentKind kind = CompartmentKind.General)
+    {
+        ArgumentNullException.ThrowIfNull(closedPolyXz);
+        if (closedPolyXz.Count < 3)
+            throw new ArgumentException("Compartment needs at least 3 points.", nameof(closedPolyXz));
+        var next = AddCompartment(design, deckId, name, closedPolyXz, kind);
+        return EnsureSharedBulkheads(next, deckId);
+    }
+
+    public static ShipDesign UpdateCompartmentPolygon(
+        ShipDesign design,
+        CompartmentId compartmentId,
+        IReadOnlyList<float[]> closedPolyXz)
+    {
+        ArgumentNullException.ThrowIfNull(design);
+        ArgumentNullException.ThrowIfNull(closedPolyXz);
+        if (closedPolyXz.Count < 3)
+            throw new ArgumentException("Compartment needs at least 3 points.", nameof(closedPolyXz));
+        DeckId? deckId = null;
+        var compartments = design.Compartments.Select(c =>
+        {
+            if (c.Id.Value != compartmentId.Value)
+                return c;
+            deckId = c.DeckId;
+            var deck = RequireDeck(design, c.DeckId);
+            var elev = ShipLengths.ToMeters(deck.Elevation);
+            var height = design.Ship.HeightMeters / System.Math.Max(1, design.Ship.DeckCount) * 0.9f;
+            return c with
+            {
+                Geometry = ShipGeometryBuilders.BuildCompartmentBoundary(
+                    c.Name, closedPolyXz, height, elev, deck.Index),
+            };
+        }).ToList();
+        var next = design with { Compartments = compartments, ModifiedAt = Now() };
+        return deckId is { } d ? EnsureSharedBulkheads(next, d) : next;
+    }
+
+    /// <summary>Create missing non-primary bulkheads for shared compartment edges on a deck.</summary>
+    public static ShipDesign EnsureSharedBulkheads(ShipDesign design, DeckId deckId)
+    {
+        ArgumentNullException.ThrowIfNull(design);
+        var deck = RequireDeck(design, deckId);
+        var elev = ShipLengths.ToMeters(deck.Elevation);
+        var deckH = System.Math.Max(2.2f, design.Ship.HeightMeters / System.Math.Max(1, design.Ship.DeckCount) * 0.9f);
+        var thickness = System.Math.Max(0.05f, design.Ship.HullThicknessMeters);
+        var material = StructuralMaterial(design);
+        var existing = design.Bulkheads
+            .Where(b => b.DeckId?.Value == deckId.Value)
+            .Select(b => ShipPlanPaths.ExtractPathXz(b.Geometry))
+            .Where(p => p.Count >= 2)
+            .ToList();
+        var bulkheads = design.Bulkheads.ToList();
+        foreach (var edge in CompartmentBoundaryResolver.FindSharedEdges(design))
+        {
+            var a = design.Compartments.FirstOrDefault(c => c.Id.Value == edge.A.Value);
+            var b = design.Compartments.FirstOrDefault(c => c.Id.Value == edge.B.Value);
+            if (a is null || b is null)
+                continue;
+            if (a.DeckId.Value != deckId.Value || b.DeckId.Value != deckId.Value)
+                continue;
+            float[][] path = [edge.FromXz, edge.ToXz];
+            if (existing.Any(p => PathsMatch(p, path)))
+                continue;
+            var name = $"BH-Shared-{bulkheads.Count + 1}";
+            bulkheads.Add(new BulkheadDesign
+            {
+                Id = BulkheadId.New(),
+                Name = name,
+                Material = new MaterialId(material),
+                Thickness = ShipLengths.FromMeters(thickness),
+                Height = ShipLengths.FromMeters(deckH),
+                DeckId = deckId,
+                IsPrimary = false,
+                Geometry = ShipGeometryBuilders.BuildBulkheadPath(
+                    name, path, thickness, deckH, elev, material, deck.Index),
+            });
+            existing.Add(path.ToList());
+        }
+
+        return design with { Bulkheads = bulkheads, ModifiedAt = Now() };
+    }
+
+    /// <summary>Door/opening on a bulkhead at normalized parameter t along its path.</summary>
+    public static ShipDesign AddOpeningOnHost(
+        ShipDesign design,
+        BulkheadId hostId,
+        string name,
+        OpeningKind kind,
+        float tAlong,
+        float clearWidthM,
+        float clearHeightM)
+    {
+        ArgumentNullException.ThrowIfNull(design);
+        var host = design.Bulkheads.FirstOrDefault(b => b.Id.Value == hostId.Value)
+            ?? throw new ArgumentException("Host bulkhead not found.", nameof(hostId));
+        var path = ShipPlanPaths.ExtractPathXz(host.Geometry);
+        var xz = ShipPlanPaths.PointAlong(path, tAlong);
+        var deck = host.DeckId is { } did
+            ? design.Decks.FirstOrDefault(d => d.Id.Value == did.Value)
+            : null;
+        var elev = deck is null ? 0f : ShipLengths.ToMeters(deck.Elevation);
+        return AddOpening(
+            design,
+            host.Id.AsObject(),
+            name,
+            kind,
+            clearWidthM,
+            clearHeightM,
+            [xz[0], elev + clearHeightM * 0.5f, xz[1]]);
+    }
+
+    private static DeckDesign RequireDeck(ShipDesign design, DeckId deckId) =>
+        design.Decks.FirstOrDefault(d => d.Id.Value == deckId.Value)
+        ?? throw new ArgumentException("Deck not found.", nameof(deckId));
+
+    private static string StructuralMaterial(ShipDesign design) =>
+        design.Ship.PrimaryStructuralMaterial.Value is { Length: > 0 } m
+            ? m
+            : design.Ship.HullMaterial.Value;
+
+    private static bool PathsMatch(IReadOnlyList<float[]> a, IReadOnlyList<float[]> b, float tol = 0.08f)
+    {
+        if (a.Count < 2 || b.Count < 2)
+            return false;
+        var a0 = a[0];
+        var a1 = a[^1];
+        var b0 = b[0];
+        var b1 = b[^1];
+        return (Near(a0, b0, tol) && Near(a1, b1, tol)) || (Near(a0, b1, tol) && Near(a1, b0, tol));
+    }
+
+    private static bool Near(float[] a, float[] b, float tol) =>
+        MathF.Abs(a[0] - b[0]) <= tol && MathF.Abs(a[1] - b[1]) <= tol;
 
     public static ShipDesign AddEquipment(
         ShipDesign design,
@@ -283,7 +472,7 @@ public static class ShipDesignMutations
         {
             if (b.Id.Value != bulkheadId.Value)
                 return b;
-            var path = ExtractPathXz(b.Geometry);
+            var path = ShipPlanPaths.ExtractPathXz(b.Geometry);
             var elev = b.DeckId is { } deckId
                 ? ShipLengths.ToMeters(design.Decks.FirstOrDefault(d => d.Id.Value == deckId.Value)?.Elevation ?? ShipLengths.FromMeters(0f))
                 : 0f;
@@ -312,7 +501,7 @@ public static class ShipDesignMutations
                 return p;
             var deck = design.Decks.FirstOrDefault(d => d.Id.Value == p.DeckId.Value);
             var elev = deck is null ? 0f : ShipLengths.ToMeters(deck.Elevation);
-            var path = ExtractPathXz(p.Geometry);
+            var path = ShipPlanPaths.ExtractPathXz(p.Geometry);
             return p with
             {
                 Width = ShipLengths.FromMeters(widthM),
@@ -326,17 +515,61 @@ public static class ShipDesignMutations
         return StructuralCutoutService.Regenerate(next);
     }
 
-    private static List<float[]> ExtractPathXz(Novolis.Cad.Primitives.CadDocument geometry)
+    public static ShipDesign UpdatePassagePath(ShipDesign design, PassageId passageId, IReadOnlyList<float[]> pathXz)
     {
-        var path = new List<float[]>();
-        foreach (var e in geometry.Entities)
+        ArgumentNullException.ThrowIfNull(design);
+        ArgumentNullException.ThrowIfNull(pathXz);
+        if (pathXz.Count < 2)
+            return design;
+        var passages = design.Passages.Select(p =>
         {
-            if (e.A is { Length: >= 3 })
-                path.Add([e.A[0], e.A[2]]);
-            if (e.B is { Length: >= 3 })
-                path.Add([e.B[0], e.B[2]]);
-        }
+            if (p.Id.Value != passageId.Value)
+                return p;
+            var deck = design.Decks.FirstOrDefault(d => d.Id.Value == p.DeckId.Value);
+            var elev = deck is null ? 0f : ShipLengths.ToMeters(deck.Elevation);
+            return p with
+            {
+                Geometry = deck is null
+                    ? p.Geometry
+                    : ShipGeometryBuilders.BuildPassageVolume(
+                        p.Name, pathXz, ShipLengths.ToMeters(p.Width), ShipLengths.ToMeters(p.Height), elev, deck.Index),
+            };
+        }).ToList();
+        var next = design with { Passages = passages, ModifiedAt = Now() };
+        return StructuralCutoutService.Regenerate(next);
+    }
 
-        return path;
+    /// <summary>Slide an opening along its host bulkhead to normalized parameter t.</summary>
+    public static ShipDesign MoveOpeningAlongHost(ShipDesign design, OpeningId openingId, float tAlong)
+    {
+        ArgumentNullException.ThrowIfNull(design);
+        var opening = design.Openings.FirstOrDefault(o => o.Id.Value == openingId.Value);
+        if (opening is null)
+            return design;
+        var host = design.Bulkheads.FirstOrDefault(b => b.Id.Value == opening.HostId.Value);
+        if (host is null)
+            return design;
+        var path = ShipPlanPaths.ExtractPathXz(host.Geometry);
+        var xz = ShipPlanPaths.PointAlong(path, tAlong);
+        var deck = host.DeckId is { } did
+            ? design.Decks.FirstOrDefault(d => d.Id.Value == did.Value)
+            : null;
+        var elev = deck is null ? 0f : ShipLengths.ToMeters(deck.Elevation);
+        var ent = opening.Geometry.Entities.FirstOrDefault();
+        var clearW = ent?.HalfExtents is { Length: >= 1 } he && he[0] > 0.05f ? he[0] * 2f : 0.9f;
+        var clearH = ent?.HalfExtents is { Length: >= 2 } hy && hy[1] > 0.05f ? hy[1] * 2f : 2f;
+        var deckIndex = deck?.Index ?? 0;
+        var openings = design.Openings.Select(o =>
+        {
+            if (o.Id.Value != openingId.Value)
+                return o;
+            return o with
+            {
+                Geometry = ShipGeometryBuilders.BuildOpeningAperture(
+                    o.Name, clearW, clearH, [xz[0], elev + clearH * 0.5f, xz[1]], o.Kind.ToString(), deckIndex),
+            };
+        }).ToList();
+        var next = design with { Openings = openings, ModifiedAt = Now() };
+        return StructuralCutoutService.Regenerate(next);
     }
 }

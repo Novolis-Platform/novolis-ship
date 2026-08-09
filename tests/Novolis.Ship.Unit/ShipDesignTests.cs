@@ -135,6 +135,31 @@ public sealed class ShipDesignTests
     }
 
     [Test]
+    public async Task Architect_strokes_bulkhead_room_opening()
+    {
+        var design = ShipFactory.Create(SampleDefinition());
+        var deck = design.Decks[1];
+        design = ShipDesignMutations.AddBulkheadPath(
+            design, deck.Id, "Wall-A", [[-6f, -4f], [6f, -4f]], 0.08f, 3.2f);
+        await Assert.That(design.Bulkheads.Count).IsEqualTo(4);
+        design = ShipDesignMutations.AddCompartmentPolygon(
+            design, deck.Id, "Room-A", [[-5f, -8f], [5f, -8f], [5f, -1f], [-5f, -1f]]);
+        design = ShipDesignMutations.AddCompartmentPolygon(
+            design, deck.Id, "Room-B", [[-5f, -1f], [5f, -1f], [5f, 6f], [-5f, 6f]]);
+        await Assert.That(design.Compartments.Count).IsEqualTo(2);
+        var shared = CompartmentBoundaryResolver.FindSharedEdges(design);
+        await Assert.That(shared.Count).IsGreaterThan(0);
+        await Assert.That(design.Bulkheads.Count(b => !b.IsPrimary)).IsGreaterThan(0);
+        var host = design.Bulkheads.First(b => b.Name == "Wall-A");
+        design = ShipDesignMutations.AddOpeningOnHost(
+            design, host.Id, "Door-A", OpeningKind.Door, tAlong: 0.5f, clearWidthM: 0.9f, clearHeightM: 2f);
+        await Assert.That(design.Openings.Count).IsEqualTo(1);
+        design = ShipDesignMutations.AppendBulkheadVertex(design, host.Id, 6f, 0f);
+        var path = ShipPlanPaths.ExtractPathXz(design.Bulkheads.First(b => b.Id.Value == host.Id.Value).Geometry);
+        await Assert.That(path.Count).IsGreaterThanOrEqualTo(3);
+    }
+
+    [Test]
     public async Task Mutations_add_bulkhead_opening_and_equipment()
     {
         var design = ShipFactory.Create(SampleDefinition());
