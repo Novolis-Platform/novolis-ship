@@ -16,18 +16,22 @@ public static class ShipFactory
         var L = definition.LengthMeters;
         var B = definition.BeamMeters;
         var H = definition.HeightMeters;
-        var mat = definition.HullMaterial.Value;
+        var hullMat = definition.HullMaterial.Value;
+        var structMat = (definition.PrimaryStructuralMaterial.Value is { Length: > 0 } m
+            ? m
+            : hullMat);
         var now = DateTimeOffset.UtcNow.ToString("O");
+        var environment = ShipEnvironment.FromDefinition(definition);
 
         var hullGeom = definition.HullGenerator switch
         {
-            HullGeneratorKind.Box => ShipGeometryBuilders.BuildBoxHull(L, B, H, mat),
-            HullGeneratorKind.TaperedBox => ShipGeometryBuilders.BuildTaperedBoxHull(L, B, H, mat),
-            HullGeneratorKind.Faceted => ShipGeometryBuilders.BuildFacetedHull(L, B, H, mat),
-            HullGeneratorKind.Cylinder => ShipGeometryBuilders.BuildCylinderHull(L, B, H, mat),
-            HullGeneratorKind.Capsule => ShipGeometryBuilders.BuildCapsuleHull(L, B, H, mat),
-            HullGeneratorKind.LoftedSections => ShipGeometryBuilders.BuildLoftedSectionsHull(L, B, H, mat),
-            _ => ShipGeometryBuilders.BuildTaperedBoxHull(L, B, H, mat),
+            HullGeneratorKind.Box => ShipGeometryBuilders.BuildBoxHull(L, B, H, hullMat),
+            HullGeneratorKind.TaperedBox => ShipGeometryBuilders.BuildTaperedBoxHull(L, B, H, hullMat),
+            HullGeneratorKind.Faceted => ShipGeometryBuilders.BuildFacetedHull(L, B, H, hullMat),
+            HullGeneratorKind.Cylinder => ShipGeometryBuilders.BuildCylinderHull(L, B, H, hullMat),
+            HullGeneratorKind.Capsule => ShipGeometryBuilders.BuildCapsuleHull(L, B, H, hullMat),
+            HullGeneratorKind.LoftedSections => ShipGeometryBuilders.BuildLoftedSectionsHull(L, B, H, hullMat),
+            _ => ShipGeometryBuilders.BuildTaperedBoxHull(L, B, H, hullMat),
         };
 
         var hull = new HullDesign
@@ -39,7 +43,7 @@ public static class ShipFactory
             Generator = definition.HullGenerator,
         };
 
-        var deckSpacing = H / System.Math.Max(1, definition.DeckCount);
+        var deckSpacing = definition.DeckSpacingMeters;
         var decks = new List<DeckDesign>(definition.DeckCount);
         for (var i = 0; i < definition.DeckCount; i++)
         {
@@ -67,8 +71,8 @@ public static class ShipFactory
                 Id = FrameId.New(),
                 Name = name,
                 Station = ShipLengths.FromMeters(z),
-                Material = definition.HullMaterial,
-                Geometry = ShipGeometryBuilders.BuildFrameAtStation(name, z, B, H, 0.08f, mat),
+                Material = new MaterialId(structMat),
+                Geometry = ShipGeometryBuilders.BuildFrameAtStation(name, z, B, H, 0.08f, structMat),
             });
             frameIndex++;
         }
@@ -80,8 +84,8 @@ public static class ShipFactory
                 Id = FrameId.New(),
                 Name = "F000",
                 Station = ShipLengths.FromMeters(0f),
-                Material = definition.HullMaterial,
-                Geometry = ShipGeometryBuilders.BuildFrameAtStation("F000", 0f, B, H, 0.08f, mat),
+                Material = new MaterialId(structMat),
+                Geometry = ShipGeometryBuilders.BuildFrameAtStation("F000", 0f, B, H, 0.08f, structMat),
             });
         }
 
@@ -92,24 +96,24 @@ public static class ShipFactory
                 Id = LongitudinalId.New(),
                 Name = "Keel",
                 Kind = LongitudinalKind.Keel,
-                Material = definition.HullMaterial,
-                Geometry = ShipGeometryBuilders.BuildLongitudinal("Keel", L, 0.15f, 0f, 0.3f, 0.12f, mat),
+                Material = new MaterialId(structMat),
+                Geometry = ShipGeometryBuilders.BuildLongitudinal("Keel", L, 0.15f, 0f, 0.3f, 0.12f, structMat),
             },
             new()
             {
                 Id = LongitudinalId.New(),
                 Name = "Port Stringer",
                 Kind = LongitudinalKind.SideLongitudinal,
-                Material = definition.HullMaterial,
-                Geometry = ShipGeometryBuilders.BuildLongitudinal("Port Stringer", L, H * 0.5f, -B * 0.4f, 0.2f, 0.08f, mat),
+                Material = new MaterialId(structMat),
+                Geometry = ShipGeometryBuilders.BuildLongitudinal("Port Stringer", L, H * 0.5f, -B * 0.4f, 0.2f, 0.08f, structMat),
             },
             new()
             {
                 Id = LongitudinalId.New(),
                 Name = "Starboard Stringer",
                 Kind = LongitudinalKind.SideLongitudinal,
-                Material = definition.HullMaterial,
-                Geometry = ShipGeometryBuilders.BuildLongitudinal("Starboard Stringer", L, H * 0.5f, B * 0.4f, 0.2f, 0.08f, mat),
+                Material = new MaterialId(structMat),
+                Geometry = ShipGeometryBuilders.BuildLongitudinal("Starboard Stringer", L, H * 0.5f, B * 0.4f, 0.2f, 0.08f, structMat),
             },
         };
 
@@ -118,7 +122,6 @@ public static class ShipFactory
         var deckElev = ShipLengths.ToMeters(midDeck.Elevation);
         var deckH = System.Math.Max(2.2f, deckSpacing * 0.9f);
         var bhThickness = System.Math.Max(0.05f, definition.HullThicknessMeters);
-        // Primary watertight planes near third-points.
         foreach (var (name, z) in new[] { ("BH-Fwd", L * 0.2f), ("BH-Mid", 0f), ("BH-Aft", -L * 0.2f) })
         {
             var path = new float[][]
@@ -130,18 +133,19 @@ public static class ShipFactory
             {
                 Id = BulkheadId.New(),
                 Name = name,
-                Material = definition.HullMaterial,
+                Material = new MaterialId(structMat),
                 Thickness = ShipLengths.FromMeters(bhThickness),
                 Height = ShipLengths.FromMeters(deckH),
                 DeckId = midDeck.Id,
                 IsPrimary = true,
                 Geometry = ShipGeometryBuilders.BuildBulkheadPath(
-                    name, path, bhThickness, deckH, deckElev, mat, midDeck.Index),
+                    name, path, bhThickness, deckH, deckElev, structMat, midDeck.Index),
             });
         }
 
         return new ShipDesign
         {
+            SchemaVersion = ShipDesign.CurrentSchemaVersion,
             CreatedAt = now,
             ModifiedAt = now,
             Ship = definition,
@@ -154,6 +158,8 @@ public static class ShipFactory
             Passages = [],
             Openings = [],
             Equipment = [],
+            Environment = environment,
+            LoadCases = ShipLoadCase.CreateBaseline(environment),
             Cutouts = [],
         };
     }

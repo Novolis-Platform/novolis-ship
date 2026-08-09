@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>Novolis.Ship.Analysis</PackageId>
+    <IsPackable>true</IsPackable>
+    <Description>Engineering plausibility analysis for ShipDesign: mass, gravity loads, pressure, decompression, structural sanity, clearance (GREEN/YELLOW/RED heuristics).</Description>
+    <RootNamespace>Novolis.Ship.Analysis</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Novolis.Ship.Design\Novolis.Ship.Design.csproj" />
+    <ProjectReference Include="..\Novolis.Ship.Structure\Novolis.Ship.Structure.csproj" />
+    <ProjectReference Include="..\Novolis.Ship.Topology\Novolis.Ship.Topology.csproj" />
+    <ProjectReference Include="..\Novolis.Ship.Validation\Novolis.Ship.Validation.csproj" />
+    <ProjectReference Include="..\Novolis.Ship.Primitives\Novolis.Ship.Primitives.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Novolis.Cad.Primitives" />
+    <PackageReference Include="Novolis.Math.Measure" />
+  </ItemGroup>
+</Project>

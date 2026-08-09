@@ -17,6 +17,7 @@ public enum LongitudinalKind
     DeckGirder = 2,
     SideLongitudinal = 3,
     CargoDeckGirder = 4,
+    MachineryGirder = 5,
 }
 
 public enum CompartmentKind
@@ -61,5 +62,5 @@ public enum ShipWorkspaceKind
 {
     Plan = 0,
     Model = 1,
-    Present = 2,
+    Analyze = 2,
 }

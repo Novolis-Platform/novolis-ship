@@ -29,7 +29,7 @@ public static class ShipDesignStore
     {
         ArgumentNullException.ThrowIfNull(design);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        var stamped = design with
+        var stamped = Migrate(design) with
         {
             Format = ShipDesign.FormatId,
             SchemaVersion = ShipDesign.CurrentSchemaVersion,
@@ -46,17 +46,65 @@ public static class ShipDesignStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         var json = File.ReadAllText(path);
+        return Deserialize(json);
+    }
+
+    public static string Serialize(ShipDesign design) =>
+        JsonSerializer.Serialize(Migrate(design) with
+        {
+            Format = ShipDesign.FormatId,
+            SchemaVersion = ShipDesign.CurrentSchemaVersion,
+        }, ShipDesignJson.Options);
+
+    public static ShipDesign Deserialize(string json)
+    {
         var design = JsonSerializer.Deserialize<ShipDesign>(json, ShipDesignJson.Options)
             ?? throw new InvalidDataException("Ship design JSON deserialized to null.");
         if (!string.Equals(design.Format, ShipDesign.FormatId, StringComparison.Ordinal))
             throw new InvalidDataException($"Unexpected ship format '{design.Format}'.");
-        return design;
+        return Migrate(design);
     }
 
-    public static string Serialize(ShipDesign design) =>
-        JsonSerializer.Serialize(design, ShipDesignJson.Options);
+    /// <summary>v1 → v2: fill Environment, LoadCases, structural material / deck spacing defaults.</summary>
+    public static ShipDesign Migrate(ShipDesign design)
+    {
+        ArgumentNullException.ThrowIfNull(design);
+        var ship = design.Ship;
+        if (string.IsNullOrWhiteSpace(ship.PrimaryStructuralMaterial.Value))
+            ship = ship with { PrimaryStructuralMaterial = ship.HullMaterial };
 
-    public static ShipDesign Deserialize(string json) =>
-        JsonSerializer.Deserialize<ShipDesign>(json, ShipDesignJson.Options)
-        ?? throw new InvalidDataException("Ship design JSON deserialized to null.");
+        var environment = design.SchemaVersion < 2
+            ? new ShipEnvironment
+            {
+                External = ship.ExternalEnvironment,
+                NominalInternalPressureAtm = ship.NominalInternalPressureAtm > 0
+                    ? ship.NominalInternalPressureAtm
+                    : 1f,
+                GravitySystem = ship.GravitySystem,
+                NominalGravityG = ship.NominalGravityG > 0 ? ship.NominalGravityG : 1f,
+            }
+            : design.Environment;
+
+        var loadCases = design.LoadCases is { Count: > 0 }
+            ? design.LoadCases
+            : ShipLoadCase.CreateBaseline(environment);
+
+        var cutouts = design.Cutouts;
+        if (cutouts.Count == 0 && (design.Passages.Count > 0 || design.Openings.Count > 0 || design.Equipment.Count > 0))
+            return StructuralCutoutService.Regenerate(design with
+            {
+                Ship = ship,
+                Environment = environment,
+                LoadCases = loadCases,
+                SchemaVersion = ShipDesign.CurrentSchemaVersion,
+            });
+
+        return design with
+        {
+            Ship = ship,
+            Environment = environment,
+            LoadCases = loadCases,
+            SchemaVersion = ShipDesign.CurrentSchemaVersion,
+        };
+    }
 }

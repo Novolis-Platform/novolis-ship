@@ -5,6 +5,7 @@
     <Project Path="src/Novolis.Ship.Validation/Novolis.Ship.Validation.csproj" />
     <Project Path="src/Novolis.Ship.Structure/Novolis.Ship.Structure.csproj" />
     <Project Path="src/Novolis.Ship.Design/Novolis.Ship.Design.csproj" />
+    <Project Path="src/Novolis.Ship.Analysis/Novolis.Ship.Analysis.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Novolis.Ship.Unit/Novolis.Ship.Unit.csproj" />

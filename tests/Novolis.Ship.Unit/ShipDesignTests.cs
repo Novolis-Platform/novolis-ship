@@ -11,10 +11,16 @@ public sealed class ShipDesignTests
         Beam = ShipLengths.FromMeters(16f),
         Height = ShipLengths.FromMeters(12f),
         DeckCount = 3,
+        DeckSpacing = ShipLengths.FromMeters(4f),
         HullMaterial = MaterialId.Steel,
-        HullThickness = ShipLengths.FromMeters(0.02f),
+        HullThickness = ShipLengths.FromMeters(0.024f),
         FrameSpacing = ShipLengths.FromMeters(4f),
+        PrimaryStructuralMaterial = MaterialId.Steel,
         HullGenerator = HullGeneratorKind.TaperedBox,
+        GravitySystem = GravitySystemKind.Plating,
+        NominalGravityG = 1f,
+        NominalInternalPressureAtm = 1f,
+        ExternalEnvironment = ExternalEnvironmentKind.Vacuum,
     };
 
     [Test]
@@ -42,12 +48,24 @@ public sealed class ShipDesignTests
             await Assert.That(loaded.Frames.Count).IsEqualTo(design.Frames.Count);
             await Assert.That(loaded.Hull.Geometry.Entities.Count).IsEqualTo(design.Hull.Geometry.Entities.Count);
             await Assert.That(ShipLengths.ToMeters(loaded.Ship.Length)).IsEqualTo(60f);
+            await Assert.That(loaded.SchemaVersion).IsEqualTo(ShipDesign.CurrentSchemaVersion);
+            await Assert.That(loaded.Environment.External).IsEqualTo(ExternalEnvironmentKind.Vacuum);
+            await Assert.That(loaded.LoadCases.Count).IsGreaterThanOrEqualTo(4);
         }
         finally
         {
             if (File.Exists(path))
                 File.Delete(path);
         }
+    }
+
+    [Test]
+    public async Task Create_seeds_environment_and_load_cases()
+    {
+        var design = ShipFactory.Create(SampleDefinition());
+        await Assert.That(design.Environment.GravitySystem).IsEqualTo(GravitySystemKind.Plating);
+        await Assert.That(design.LoadCases.Count).IsEqualTo(4);
+        await Assert.That(design.Frames[0].Material.Value).IsEqualTo("steel");
     }
 
     [Test]

@@ -58,10 +58,16 @@ public static class ShipCadProjector
             Beam = ShipLengths.FromMeters(beam),
             Height = ShipLengths.FromMeters(height),
             DeckCount = deckCount,
+            DeckSpacing = ShipLengths.FromMeters(deckSpacing),
             HullMaterial = MaterialId.Steel,
             HullThickness = ShipLengths.FromMeters(0.02f),
             FrameSpacing = ShipLengths.FromMeters(System.Math.Max(1f, loa / 12f)),
+            PrimaryStructuralMaterial = MaterialId.Steel,
             HullGenerator = HullGeneratorKind.Box,
+            GravitySystem = GravitySystemKind.Plating,
+            NominalGravityG = 1f,
+            NominalInternalPressureAtm = 1f,
+            ExternalEnvironment = ExternalEnvironmentKind.Vacuum,
         };
 
         // Best-effort: wrap exterior solids as hull geometry; remaining entities as a single compartment bag per deck.
@@ -118,8 +124,10 @@ public static class ShipCadProjector
             });
         }
 
+        var environment = ShipEnvironment.FromDefinition(definition);
         return new ShipDesign
         {
+            SchemaVersion = ShipDesign.CurrentSchemaVersion,
             CreatedAt = document.CreatedAt ?? DateTimeOffset.UtcNow.ToString("O"),
             ModifiedAt = DateTimeOffset.UtcNow.ToString("O"),
             Ship = definition,
@@ -139,6 +147,8 @@ public static class ShipCadProjector
             Passages = [],
             Openings = [],
             Equipment = [],
+            Environment = environment,
+            LoadCases = ShipLoadCase.CreateBaseline(environment),
             Cutouts = [],
         };
     }

@@ -2,11 +2,11 @@ using Novolis.Cad.Primitives;
 
 namespace Novolis.Ship.Design;
 
-/// <summary>Semantic ship design object graph (not a flattened CAD document or scene).</summary>
+/// <summary>Semantic spacecraft design object graph (not a flattened CAD document or scene).</summary>
 public sealed record ShipDesign
 {
     public const string FormatId = "novolis.ship";
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 
     public string Format { get; init; } = FormatId;
     public int SchemaVersion { get; init; } = CurrentSchemaVersion;
@@ -26,6 +26,13 @@ public sealed record ShipDesign
     public required IReadOnlyList<OpeningDesign> Openings { get; init; }
     public required IReadOnlyList<EquipmentDesign> Equipment { get; init; }
 
+    /// <summary>Operating environment (persisted intent).</summary>
+    public ShipEnvironment Environment { get; init; } = ShipEnvironment.CreateDefault();
+
+    /// <summary>Named load cases (persisted intent).</summary>
+    public IReadOnlyList<ShipLoadCase> LoadCases { get; init; } = ShipLoadCase.CreateBaseline();
+
+    /// <summary>Derived structural cutout relationships (regenerated from functional sources).</summary>
     public IReadOnlyList<StructuralCutout> Cutouts { get; init; } = [];
 
     public IEnumerable<(ShipObjectId Id, CadDocument Geometry, string Kind)> GeometricObjects()
