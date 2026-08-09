@@ -110,6 +110,12 @@ public sealed record EquipmentDesign
     [JsonConverter(typeof(LengthMetersJsonConverter))]
     public Length ServiceClearance { get; init; }
 
+    /// <summary>Yaw / pitch / roll (radians).</summary>
+    public float[] Orientation { get; init; } = [0f, 0f, 0f];
+
+    /// <summary>Connection points as XYZ triples (baseline equipment envelope).</summary>
+    public IReadOnlyList<float[]> ConnectionPoints { get; init; } = [];
+
     public float YawRadians { get; init; }
 }
 

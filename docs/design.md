@@ -4,40 +4,56 @@ Avalonia-free ship domain — object-first design model, structure generators, t
 
 Published docs: [https://novolis-platform.github.io/.github/novolis-ship/](https://novolis-platform.github.io/.github/novolis-ship/)
 
-## Layer placement
-
-Ship domain DTOs and evaluation are Avalonia-free. UI chrome lives in `Novolis.Avalonia.Ship` / `Novolis.Avalonia.Ship.Design`.
-
-## Package stack
+## Package placement (baseline)
 
 ```text
-Novolis.Cad.* + Novolis.Math.Geometry / Measure + Novolis.3D.Scene
-        │
-        ▼
-Novolis.Ship.Primitives   → ship kinds, metrics, cad helpers
-        │
-        ├──► Novolis.Ship.Structure   → plate BOM/mass + primary structure CadDocument builders
-        ├──► Novolis.Ship.Topology    → airtight volume / hatch graph
-        └──► Novolis.Ship.Validation  → rules + diagnostics
-                │
-                ▼
-        Novolis.Ship.Design           → ShipDesign SoT (.shipjson), factory, cutouts, scene eval
+Novolis.Cad.Primitives
+Novolis.Cad.Evaluation
+
+Novolis.3D.Modeling          ← mesh ops façade over Math.Geometry
+Novolis.3D.Scene
+
+Novolis.Ship.Primitives
+Novolis.Ship.Structure
+Novolis.Ship.Topology
+Novolis.Ship.Validation
+Novolis.Ship.Design          ← Avalonia-free semantic SoT
+
+Novolis.Avalonia.Ship.Design ← PLAN / MODEL / PRESENT interaction
 ```
 
-Authoring SoT is **`novolis.ship` / `.shipjson`**. Flat `.cadjson` is import/export via `ShipCadProjector`.
+## Geometry architecture
 
-Schema: `novolis-governance/schemas/ship/novolis.ship.schema.json`.
+Every geometric ship object owns a `CadDocument` (construction intent).
 
-## Goals
+```text
+Ship object          what it is
+CadDocument          how geometry is constructed
+Cad.Evaluation       evaluates construction
+Novolis.3D.Modeling  boolean / weld / split on evaluated meshes
+Novolis.3D.Scene     presents evaluated meshes
+```
 
-- Object-first ship design (hull, decks, frames, longitudinals, bulkheads, compartments, passages, openings, equipment).
-- Every geometric object owns a `CadDocument` construction graph.
-- Structural cutouts are relationships, regenerated from functional sources.
-- Scene mesh evaluation is composed in `Novolis.Avalonia.Ship.Design` (Cad.Evaluation / 3D.Scene), not in Avalonia-free ship packages.
+CAD is never rendered directly. Rendering always consumes evaluated 3D meshes composed in `Novolis.Avalonia.Ship.Design` (`ShipDesignEvaluator`).
+
+## Authoring SoT
+
+- Format: **`novolis.ship` / `.shipjson`**
+- Flat `.cadjson` is import/export via `ShipCadProjector` (Calypso bridge)
+- Schema: `novolis-governance/schemas/ship/novolis.ship.schema.json`
+
+## Core rules
+
+1. User designs a ship, not a CAD document.
+2. Primary structure (hull → decks → frames → longitudinals → primary bulkheads) is generated before layout.
+3. Passages / openings / equipment create derived `StructuralCutout` relationships.
+4. Cutouts are not independently authored geometry.
+5. Bulkheads are path-based; compartments may share one physical boundary.
+6. Validation is continuous on design change.
 
 ## Non-goals
 
-- Avalonia or Raylib references in `Novolis.Ship.*`.
-- Product hosts or LocalAppData paths in this library repo.
-- Local NuGet folder feeds.
-- Recreating `Novolis.3D.Modeling` (mesh ops live in Math.Geometry; scene in Novolis.3D.Scene).
+- Avalonia or Raylib references in `Novolis.Ship.*`
+- Product hosts or LocalAppData paths in this library repo
+- Full BREP/NURBS loft (LoftedSections remains a generator stub)
+- Duplicating mesh algorithms outside Math.Geometry / `Novolis.3D.Modeling`

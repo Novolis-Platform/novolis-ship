@@ -23,7 +23,10 @@ public static class ShipFactory
         {
             HullGeneratorKind.Box => ShipGeometryBuilders.BuildBoxHull(L, B, H, mat),
             HullGeneratorKind.TaperedBox => ShipGeometryBuilders.BuildTaperedBoxHull(L, B, H, mat),
-            // Stubs fall back to tapered box until dedicated generators land.
+            HullGeneratorKind.Faceted => ShipGeometryBuilders.BuildFacetedHull(L, B, H, mat),
+            HullGeneratorKind.Cylinder => ShipGeometryBuilders.BuildCylinderHull(L, B, H, mat),
+            HullGeneratorKind.Capsule => ShipGeometryBuilders.BuildCapsuleHull(L, B, H, mat),
+            HullGeneratorKind.LoftedSections => ShipGeometryBuilders.BuildLoftedSectionsHull(L, B, H, mat),
             _ => ShipGeometryBuilders.BuildTaperedBoxHull(L, B, H, mat),
         };
 

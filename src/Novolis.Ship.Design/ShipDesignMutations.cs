@@ -130,4 +130,69 @@ public static class ShipDesignMutations
         var next = design with { Frames = frames, ModifiedAt = DateTimeOffset.UtcNow.ToString("O") };
         return StructuralCutoutService.Regenerate(next);
     }
+
+    public static ShipDesign SetBulkheadThickness(ShipDesign design, BulkheadId bulkheadId, float thicknessM)
+    {
+        ArgumentNullException.ThrowIfNull(design);
+        thicknessM = System.Math.Clamp(thicknessM, 0.02f, 1f);
+        var bulkheads = design.Bulkheads.Select(b =>
+        {
+            if (b.Id.Value != bulkheadId.Value)
+                return b;
+            var path = ExtractPathXz(b.Geometry);
+            var elev = b.DeckId is { } deckId
+                ? ShipLengths.ToMeters(design.Decks.FirstOrDefault(d => d.Id.Value == deckId.Value)?.Elevation ?? ShipLengths.FromMeters(0f))
+                : 0f;
+            var deckIndex = b.DeckId is { } did
+                ? design.Decks.FirstOrDefault(d => d.Id.Value == did.Value)?.Index ?? 0
+                : 0;
+            return b with
+            {
+                Thickness = ShipLengths.FromMeters(thicknessM),
+                Geometry = path.Count >= 2
+                    ? ShipGeometryBuilders.BuildBulkheadPath(
+                        b.Name, path, thicknessM, ShipLengths.ToMeters(b.Height), elev, b.Material.Value, deckIndex)
+                    : b.Geometry,
+            };
+        }).ToList();
+        return design with { Bulkheads = bulkheads, ModifiedAt = DateTimeOffset.UtcNow.ToString("O") };
+    }
+
+    public static ShipDesign SetPassageWidth(ShipDesign design, PassageId passageId, float widthM)
+    {
+        ArgumentNullException.ThrowIfNull(design);
+        widthM = System.Math.Max(0.6f, widthM);
+        var passages = design.Passages.Select(p =>
+        {
+            if (p.Id.Value != passageId.Value)
+                return p;
+            var deck = design.Decks.FirstOrDefault(d => d.Id.Value == p.DeckId.Value);
+            var elev = deck is null ? 0f : ShipLengths.ToMeters(deck.Elevation);
+            var path = ExtractPathXz(p.Geometry);
+            return p with
+            {
+                Width = ShipLengths.FromMeters(widthM),
+                Geometry = path.Count >= 2 && deck is not null
+                    ? ShipGeometryBuilders.BuildPassageVolume(
+                        p.Name, path, widthM, ShipLengths.ToMeters(p.Height), elev, deck.Index)
+                    : p.Geometry,
+            };
+        }).ToList();
+        var next = design with { Passages = passages, ModifiedAt = DateTimeOffset.UtcNow.ToString("O") };
+        return StructuralCutoutService.Regenerate(next);
+    }
+
+    private static List<float[]> ExtractPathXz(Novolis.Cad.Primitives.CadDocument geometry)
+    {
+        var path = new List<float[]>();
+        foreach (var e in geometry.Entities)
+        {
+            if (e.A is { Length: >= 3 })
+                path.Add([e.A[0], e.A[2]]);
+            if (e.B is { Length: >= 3 })
+                path.Add([e.B[0], e.B[2]]);
+        }
+
+        return path;
+    }
 }

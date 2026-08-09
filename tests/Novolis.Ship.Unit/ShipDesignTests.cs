@@ -85,4 +85,37 @@ public sealed class ShipDesignTests
         var result = ShipDesignValidator.Validate(design);
         await Assert.That(result.Issues.Any(i => i.Code == "SHIP_HULL_EMPTY")).IsFalse();
     }
+
+    [Test]
+    public async Task Hull_generators_produce_geometry()
+    {
+        foreach (var kind in new[]
+                 {
+                     HullGeneratorKind.Box,
+                     HullGeneratorKind.TaperedBox,
+                     HullGeneratorKind.Faceted,
+                     HullGeneratorKind.Cylinder,
+                     HullGeneratorKind.Capsule,
+                     HullGeneratorKind.LoftedSections,
+                 })
+        {
+            var def = SampleDefinition() with { HullGenerator = kind, Name = kind.ToString() };
+            var design = ShipFactory.Create(def);
+            await Assert.That(design.Hull.Geometry.Entities.Count).IsGreaterThan(0);
+            await Assert.That(design.Hull.Generator).IsEqualTo(kind);
+        }
+    }
+
+    [Test]
+    public async Task Shared_compartment_edges_are_detected()
+    {
+        var design = ShipFactory.Create(SampleDefinition());
+        var deck = design.Decks[1];
+        design = ShipDesignMutations.AddCompartment(
+            design, deck.Id, "A", [[-5f, -5f], [0f, -5f], [0f, 5f], [-5f, 5f]]);
+        design = ShipDesignMutations.AddCompartment(
+            design, deck.Id, "B", [[0f, -5f], [5f, -5f], [5f, 5f], [0f, 5f]]);
+        var shared = CompartmentBoundaryResolver.FindSharedEdges(design);
+        await Assert.That(shared.Count).IsGreaterThan(0);
+    }
 }

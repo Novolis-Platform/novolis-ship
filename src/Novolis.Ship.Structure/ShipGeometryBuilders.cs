@@ -70,6 +70,89 @@ public static class ShipGeometryBuilders
         return doc;
     }
 
+    /// <summary>Faceted prism approximation of a closed hull envelope.</summary>
+    public static CadDocument BuildFacetedHull(float lengthM, float beamM, float heightM, string material, int facets = 8)
+    {
+        var doc = NewGeometryDoc("Hull");
+        facets = System.Math.Clamp(facets, 4, 24);
+        var halfL = lengthM * 0.5f;
+        var r = beamM * 0.5f;
+        for (var i = 0; i < facets; i++)
+        {
+            var a0 = (i / (float)facets) * MathF.PI * 2f;
+            var a1 = ((i + 1) / (float)facets) * MathF.PI * 2f;
+            var x0 = MathF.Cos(a0) * r;
+            var y0 = heightM * 0.5f + MathF.Sin(a0) * heightM * 0.35f;
+            var x1 = MathF.Cos(a1) * r;
+            var y1 = heightM * 0.5f + MathF.Sin(a1) * heightM * 0.35f;
+            var wall = new CadEntity
+            {
+                Kind = "wall",
+                Name = $"hull-facet-{i}",
+                Material = material,
+                A = [x0, System.Math.Max(0.2f, y0 - heightM * 0.2f), -halfL],
+                B = [x1, System.Math.Max(0.2f, y1 - heightM * 0.2f), halfL],
+                Thickness = 0.08f,
+                Height = heightM * 0.85f,
+            };
+            TagExterior(wall);
+            doc.Entities.Add(wall);
+        }
+
+        return doc;
+    }
+
+    /// <summary>Cylinder hull stub (axis along ship length).</summary>
+    public static CadDocument BuildCylinderHull(float lengthM, float beamM, float heightM, string material)
+    {
+        var doc = NewGeometryDoc("Hull");
+        var cyl = new CadEntity
+        {
+            Kind = "cylinder",
+            Name = "hull-cylinder",
+            Material = material,
+            Center = [0f, heightM * 0.5f, 0f],
+            HalfExtents = [beamM * 0.5f, heightM * 0.5f, lengthM * 0.5f],
+            Radius = beamM * 0.5f,
+            Height = lengthM,
+        };
+        TagExterior(cyl);
+        doc.Entities.Add(cyl);
+        return doc;
+    }
+
+    /// <summary>Capsule hull stub (cylinder + hemispheric ends as boxes until BREP loft lands).</summary>
+    public static CadDocument BuildCapsuleHull(float lengthM, float beamM, float heightM, string material)
+    {
+        var doc = BuildCylinderHull(lengthM * 0.7f, beamM, heightM, material);
+        doc.Name = "Hull";
+        var nose = new CadEntity
+        {
+            Kind = "box",
+            Name = "hull-nose",
+            Material = material,
+            Center = [0f, heightM * 0.5f, lengthM * 0.4f],
+            HalfExtents = [beamM * 0.35f, heightM * 0.35f, lengthM * 0.1f],
+        };
+        TagExterior(nose);
+        var tail = new CadEntity
+        {
+            Kind = "box",
+            Name = "hull-tail",
+            Material = material,
+            Center = [0f, heightM * 0.5f, -lengthM * 0.4f],
+            HalfExtents = [beamM * 0.35f, heightM * 0.35f, lengthM * 0.1f],
+        };
+        TagExterior(tail);
+        doc.Entities.Add(nose);
+        doc.Entities.Add(tail);
+        return doc;
+    }
+
+    /// <summary>LoftedSections stub — uses tapered box until section loft lands.</summary>
+    public static CadDocument BuildLoftedSectionsHull(float lengthM, float beamM, float heightM, string material) =>
+        BuildTaperedBoxHull(lengthM, beamM, heightM, material);
+
     public static CadDocument BuildDeckPlate(string name, float lengthM, float beamM, float elevationM, float thicknessM = 0.05f)
     {
         var doc = NewGeometryDoc(name);
