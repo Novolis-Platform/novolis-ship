@@ -23,6 +23,10 @@ public static class ShipPropertyKeys
     public const string SealAssist = "sealAssist";
     public const string HingeBias = "hingeBias";
     public const string SealFace = "sealFace";
+    /// <summary>JSON string array of space names the opening connects, e.g. <c>["CORR_P","HOLD"]</c>.</summary>
+    public const string Connects = "connects";
+    /// <summary><c>standardHatch</c> or <c>vacuumHatch</c>.</summary>
+    public const string HatchClass = "hatchClass";
     public const string AtmosphereClass = "atmosphereClass";
     public const string PressureKPa = "pressureKPa";
     public const string MemberSpaceIds = "memberSpaceIds";

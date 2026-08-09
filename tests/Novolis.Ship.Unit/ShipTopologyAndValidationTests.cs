@@ -1,3 +1,4 @@
+using System.Numerics;
 using Novolis.Cad.Primitives;
 using Novolis.Ship.Primitives;
 using Novolis.Ship.Topology;
@@ -99,6 +100,38 @@ public sealed class ShipTopologyAndValidationTests
         ShipCad.TagOpeningPressure(hatch, ShipPressureClass.Vacuum, 1.0f, 2.1f);
         var result = ShipValidator.Validate(doc);
         await Assert.That(result.Issues.Any(i => i.Code == "SHIP_VACUUM_SEAL")).IsTrue();
+    }
+
+    [Test]
+    public async Task ApplyVacuumSeal_closes_open_vacuum_hatch()
+    {
+        var doc = BuildExteriorHatchFixture(leafOpen: true, vacuumAssist: true);
+        var hatch = ShipCad.Openings(doc).First();
+        await Assert.That(ShipCad.GetLeafState(hatch)).IsEqualTo(ShipLeafState.Open);
+        var closed = ShipCad.ApplyVacuumSeal(doc, cabinKPa: 101.3f, exteriorKPa: 0f);
+        await Assert.That(closed).IsEqualTo(1);
+        await Assert.That(ShipCad.GetLeafState(hatch)).IsEqualTo(ShipLeafState.Closed);
+    }
+
+    [Test]
+    public async Task Standard_open_hatch_walk_path_stays_inside_spaces()
+    {
+        var doc = BuildTwoRoomFixture(doorClearWidth: 1.1f, leafOpen: true);
+        var door = ShipCad.Openings(doc).First();
+        ShipCad.TagStandardHatch(door, 1.1f, 2.2f, leafState: ShipLeafState.Open);
+        ShipCad.TagOpeningConnects(door, "Port", "Starboard");
+
+        var port = ShipCad.Spaces(doc).First(s => s.Name == "Port");
+        var stbd = ShipCad.Spaces(doc).First(s => s.Name == "Starboard");
+        await Assert.That(ShipWalk.TryFindSpacePath(doc, port.Id, stbd.Id, out var path, out var edges)).IsTrue();
+        var wps = ShipWalk.BuildStandingPath(doc, path, edges);
+        await Assert.That(wps.Count).IsGreaterThan(2);
+        foreach (var wp in wps)
+        {
+            var space = doc.Entities.First(e => e.Id == wp.SpaceId);
+            var clamped = ShipWalk.ClampToSpace(space, wp.Eye, ShipWalk.DefaultInset);
+            await Assert.That(Vector3.Distance(wp.Eye, clamped)).IsLessThan(0.05f);
+        }
     }
 
     /// <summary>

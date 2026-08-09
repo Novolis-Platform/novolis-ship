@@ -112,6 +112,8 @@ public static class ShipCad
             JsonSerializer.SerializeToElement(nameof(ShipHingeBias.OpensInboard));
         opening.Properties[ShipPropertyKeys.SealFace] =
             JsonSerializer.SerializeToElement(nameof(ShipSealFace.Outboard));
+        opening.Properties[ShipPropertyKeys.HatchClass] =
+            JsonSerializer.SerializeToElement("vacuumHatch");
     }
 
     /// <summary>
@@ -143,6 +145,101 @@ public static class ShipCad
         GetSealAssist(opening) == ShipSealAssist.PressureAssist
         && GetHingeBias(opening) == ShipHingeBias.OpensInboard
         && GetSealFace(opening) == ShipSealFace.Outboard;
+
+    /// <summary>
+    /// Standard personnel hatch: habitable rating, airtight when closed, walkable when open.
+    /// Defaults to <see cref="ShipLeafState.Open"/> for circulation tours.
+    /// </summary>
+    public static void TagStandardHatch(
+        CadEntity opening,
+        float clearWidth,
+        float clearHeight,
+        float sillHeight = 0.15f,
+        ShipLeafState leafState = ShipLeafState.Open)
+    {
+        TagOpeningPressure(
+            opening,
+            ShipPressureClass.Habitable,
+            clearWidth,
+            clearHeight,
+            sillHeight,
+            airtightWhenClosed: true,
+            leafState);
+        opening.Properties![ShipPropertyKeys.HatchClass] = JsonSerializer.SerializeToElement("standardHatch");
+    }
+
+    public static void SetLeafState(CadEntity opening, ShipLeafState leafState)
+    {
+        ArgumentNullException.ThrowIfNull(opening);
+        opening.Properties ??= new Dictionary<string, JsonElement>();
+        opening.Properties[ShipPropertyKeys.LeafState] = JsonSerializer.SerializeToElement(leafState.ToString());
+    }
+
+    public static void TagOpeningConnects(CadEntity opening, string fromSpace, string toSpace)
+    {
+        ArgumentNullException.ThrowIfNull(opening);
+        opening.Properties ??= new Dictionary<string, JsonElement>();
+        opening.Properties[ShipPropertyKeys.Connects] =
+            JsonSerializer.SerializeToElement(new[] { fromSpace, toSpace });
+    }
+
+    public static IReadOnlyList<string> GetOpeningConnects(CadEntity opening)
+    {
+        if (!TryGetProp(opening.Properties, ShipPropertyKeys.Connects, out var el)
+            || el.ValueKind != JsonValueKind.Array)
+            return Array.Empty<string>();
+        var list = new List<string>();
+        foreach (var item in el.EnumerateArray())
+        {
+            if (item.ValueKind == JsonValueKind.String && item.GetString() is { Length: > 0 } s)
+                list.Add(s);
+        }
+
+        return list;
+    }
+
+    public static ShipPressureClass GetPressureClass(CadEntity opening)
+    {
+        var raw = GetString(opening.Properties, ShipPropertyKeys.PressureClass, nameof(ShipPressureClass.Habitable));
+        return Enum.TryParse<ShipPressureClass>(raw, ignoreCase: true, out var v)
+            ? v
+            : ShipPressureClass.Habitable;
+    }
+
+    /// <summary>
+    /// Closes every vacuum-assisted / vacuum-class hatch when outboard pressure is below cabin
+    /// (differential seats the leaf). Returns how many leaves were forced Closed.
+    /// </summary>
+    public static int ApplyVacuumSeal(
+        CadDocument document,
+        float cabinKPa = 101.3f,
+        float exteriorKPa = 0f)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        if (SealContactPressureKPa(cabinKPa, exteriorKPa) <= 0f)
+            return 0;
+
+        var closed = 0;
+        foreach (var opening in Openings(document))
+        {
+            var vacuumClass = GetPressureClass(opening) == ShipPressureClass.Vacuum
+                              || IsVacuumAssisted(opening);
+            if (!vacuumClass)
+                continue;
+            if (GetLeafState(opening) == ShipLeafState.Closed)
+                continue;
+            SetLeafState(opening, ShipLeafState.Closed);
+            closed++;
+        }
+
+        return closed;
+    }
+
+    public static bool IsStandardHatch(CadEntity opening) =>
+        string.Equals(
+            GetString(opening.Properties, ShipPropertyKeys.HatchClass, ""),
+            "standardHatch",
+            StringComparison.OrdinalIgnoreCase);
 
     public static bool TryReadPressureVolume(CadEntity entity, out PressureVolumeInfo info)
     {
