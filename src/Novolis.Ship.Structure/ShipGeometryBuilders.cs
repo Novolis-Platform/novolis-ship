@@ -257,7 +257,7 @@ public static class ShipGeometryBuilders
             var len = MathF.Sqrt(dx * dx + dz * dz);
             if (len < 1e-4f)
                 continue;
-            doc.Entities.Add(new CadEntity
+            var ent = new CadEntity
             {
                 Kind = "box",
                 Name = $"{name}-seg{i}",
@@ -265,7 +265,15 @@ public static class ShipGeometryBuilders
                 Center = [mx, deckElevationM + heightM * 0.5f, mz],
                 HalfExtents = [widthM * 0.5f, heightM * 0.5f, len * 0.5f],
                 RotationY = MathF.Atan2(dx, dz),
-            });
+                // Stamp footprint so CadVec deck-bands deck 0 (IsolateLevel).
+                Points =
+                [
+                    [ax, deckElevationM, az],
+                    [bx, deckElevationM, bz],
+                ],
+            };
+            StampShipDeckBanded(ent);
+            doc.Entities.Add(ent);
         }
 
         return doc;
@@ -297,34 +305,65 @@ public static class ShipGeometryBuilders
         float clearWidthM,
         float clearHeightM,
         float[] center,
-        string openingType = "door")
+        string openingType = "door",
+        int deckIndex = 0)
     {
         var doc = NewGeometryDoc(name);
-        doc.Entities.Add(new CadEntity
-        {
-            Kind = "box",
-            Name = name,
-            OpeningType = openingType,
-            Center = center,
-            HalfExtents = [clearWidthM * 0.5f, clearHeightM * 0.5f, 0.1f],
-        });
-        return doc;
-    }
-
-    public static CadDocument BuildEquipmentEnvelope(string name, float[] center, float[] halfExtents, float massKg = 0f)
-    {
-        var doc = NewGeometryDoc(name);
+        var hx = clearWidthM * 0.5f;
+        var hz = 0.1f;
         var ent = new CadEntity
         {
             Kind = "box",
             Name = name,
+            OpeningType = openingType,
+            Deck = deckIndex,
+            Center = center,
+            HalfExtents = [hx, clearHeightM * 0.5f, hz],
+            Points =
+            [
+                [center[0] - hx, center.Length > 1 ? center[1] : 0f, center.Length > 2 ? center[2] - hz : 0f],
+                [center[0] + hx, center.Length > 1 ? center[1] : 0f, center.Length > 2 ? center[2] + hz : 0f],
+            ],
+        };
+        StampShipDeckBanded(ent);
+        doc.Entities.Add(ent);
+        return doc;
+    }
+
+    public static CadDocument BuildEquipmentEnvelope(
+        string name,
+        float[] center,
+        float[] halfExtents,
+        float massKg = 0f,
+        int deckIndex = 0)
+    {
+        var doc = NewGeometryDoc(name);
+        var hx = halfExtents.Length > 0 ? halfExtents[0] : 0.5f;
+        var hz = halfExtents.Length > 2 ? halfExtents[2] : hx;
+        var ent = new CadEntity
+        {
+            Kind = "box",
+            Name = name,
+            Deck = deckIndex,
             Center = center,
             HalfExtents = halfExtents,
+            Points =
+            [
+                [center[0] - hx, center.Length > 1 ? center[1] : 0f, center.Length > 2 ? center[2] - hz : 0f],
+                [center[0] + hx, center.Length > 1 ? center[1] : 0f, center.Length > 2 ? center[2] + hz : 0f],
+            ],
         };
         ent.Properties ??= new Dictionary<string, System.Text.Json.JsonElement>();
         ent.Properties["massKg"] = System.Text.Json.JsonSerializer.SerializeToElement(massKg);
+        StampShipDeckBanded(ent);
         doc.Entities.Add(ent);
         return doc;
+    }
+
+    private static void StampShipDeckBanded(CadEntity entity)
+    {
+        entity.Properties ??= new Dictionary<string, System.Text.Json.JsonElement>();
+        entity.Properties["shipDeckBanded"] = System.Text.Json.JsonSerializer.SerializeToElement(true);
     }
 
     private static void TagExterior(CadEntity entity)

@@ -81,7 +81,14 @@ public static class ShipDesignMutations
             HostId = hostId,
             Kind = kind,
             Geometry = ShipGeometryBuilders.BuildOpeningAperture(
-                name, clearWidthM, clearHeightM, center, kind.ToString()),
+                name,
+                clearWidthM,
+                clearHeightM,
+                center,
+                kind.ToString(),
+                deckIndex: design.Bulkheads.FirstOrDefault(b => b.Id.Value == hostId.Value)?.DeckId is { } did
+                    ? design.Decks.FirstOrDefault(d => d.Id.Value == did.Value)?.Index ?? 0
+                    : 0),
         };
         var next = design with
         {
@@ -131,7 +138,8 @@ public static class ShipDesignMutations
         string name,
         float[] center,
         float[] halfExtents,
-        float massKg = 500f)
+        float massKg = 500f,
+        int deckIndex = 0)
     {
         ArgumentNullException.ThrowIfNull(design);
         var equipment = new EquipmentDesign
@@ -140,7 +148,7 @@ public static class ShipDesignMutations
             Name = name,
             MassKg = massKg,
             ServiceClearance = ShipLengths.FromMeters(0.6f),
-            Geometry = ShipGeometryBuilders.BuildEquipmentEnvelope(name, center, halfExtents, massKg),
+            Geometry = ShipGeometryBuilders.BuildEquipmentEnvelope(name, center, halfExtents, massKg, deckIndex),
         };
         return design with
         {
