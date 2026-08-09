@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>Novolis.Ship.Primitives</PackageId>
+    <IsPackable>true</IsPackable>
+    <Description>Ship CAD DTOs and property helpers (pressure volumes, airlocks, hatch pressure fields) on Novolis.Cad.Primitives.</Description>
+    <RootNamespace>Novolis.Ship.Primitives</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Novolis.Cad.Primitives" />
+  </ItemGroup>
+</Project>

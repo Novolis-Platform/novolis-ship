@@ -1,0 +1,34 @@
+{
+  "packages": {
+    "Novolis.Ship.Primitives": {
+      "paths": [
+        "src/Novolis.Ship.Primitives/**",
+        "tests/Novolis.Ship.Unit/**",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "global.json"
+      ],
+      "project": "src/Novolis.Ship.Primitives/Novolis.Ship.Primitives.csproj"
+    },
+    "Novolis.Ship.Topology": {
+      "paths": [
+        "src/Novolis.Ship.Topology/**",
+        "tests/Novolis.Ship.Unit/**",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "global.json"
+      ],
+      "project": "src/Novolis.Ship.Topology/Novolis.Ship.Topology.csproj"
+    },
+    "Novolis.Ship.Validation": {
+      "paths": [
+        "src/Novolis.Ship.Validation/**",
+        "tests/Novolis.Ship.Unit/**",
+        "Directory.Build.props",
+        "Directory.Packages.props",
+        "global.json"
+      ],
+      "project": "src/Novolis.Ship.Validation/Novolis.Ship.Validation.csproj"
+    }
+  }
+}

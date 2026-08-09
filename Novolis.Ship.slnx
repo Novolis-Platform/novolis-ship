@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Novolis.Ship.Primitives/Novolis.Ship.Primitives.csproj" />
+    <Project Path="src/Novolis.Ship.Topology/Novolis.Ship.Topology.csproj" />
+    <Project Path="src/Novolis.Ship.Validation/Novolis.Ship.Validation.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Novolis.Ship.Unit/Novolis.Ship.Unit.csproj" />
+  </Folder>
+</Solution>

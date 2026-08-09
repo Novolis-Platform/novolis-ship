@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Novolis.Ship.Unit</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="JetBrains.Annotations" />
+    <PackageReference Include="TUnit" />
+    <PackageReference Include="Novolis.Cad.Primitives" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Novolis.Ship.Primitives/Novolis.Ship.Primitives.csproj" />
+    <ProjectReference Include="../../src/Novolis.Ship.Topology/Novolis.Ship.Topology.csproj" />
+    <ProjectReference Include="../../src/Novolis.Ship.Validation/Novolis.Ship.Validation.csproj" />
+  </ItemGroup>
+</Project>

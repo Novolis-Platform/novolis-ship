@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>Novolis.Ship.Validation</PackageId>
+    <IsPackable>true</IsPackable>
+    <Description>Ship CAD validation rules: hatch clearances, airlocks, orphan openings, LOA envelope.</Description>
+    <RootNamespace>Novolis.Ship.Validation</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Novolis.Cad.Primitives" />
+    <ProjectReference Include="..\Novolis.Ship.Topology\Novolis.Ship.Topology.csproj" />
+  </ItemGroup>
+</Project>
