@@ -134,10 +134,15 @@ public static class ShipCad
 
     public static bool IsExteriorSolid(CadEntity entity)
     {
-        if (entity.Properties is not null
-            && entity.Properties.TryGetValue(ShipPropertyKeys.Exterior, out var el)
-            && el.ValueKind == JsonValueKind.True)
-            return true;
+        if (TryGetProp(entity.Properties, ShipPropertyKeys.Exterior, out var el))
+        {
+            if (el.ValueKind == JsonValueKind.True)
+                return true;
+            if (el.ValueKind == JsonValueKind.String
+                && string.Equals(el.GetString(), "true", StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
         var name = entity.Name ?? "";
         return name.StartsWith("ext-", StringComparison.OrdinalIgnoreCase)
                || name.StartsWith("nacelle-", StringComparison.OrdinalIgnoreCase);
@@ -170,16 +175,35 @@ public static class ShipCad
         }
     }
 
+    private static bool TryGetProp(Dictionary<string, JsonElement>? props, string key, out JsonElement el)
+    {
+        el = default;
+        if (props is null)
+            return false;
+        if (props.TryGetValue(key, out el))
+            return true;
+        foreach (var kv in props)
+        {
+            if (string.Equals(kv.Key, key, StringComparison.OrdinalIgnoreCase))
+            {
+                el = kv.Value;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static string GetString(Dictionary<string, JsonElement>? props, string key, string fallback)
     {
-        if (props is null || !props.TryGetValue(key, out var el))
+        if (!TryGetProp(props, key, out var el))
             return fallback;
         return el.ValueKind == JsonValueKind.String ? el.GetString() ?? fallback : fallback;
     }
 
     private static float GetFloat(Dictionary<string, JsonElement>? props, string key, float fallback)
     {
-        if (props is null || !props.TryGetValue(key, out var el))
+        if (!TryGetProp(props, key, out var el))
             return fallback;
         return el.ValueKind switch
         {
@@ -191,7 +215,7 @@ public static class ShipCad
 
     private static bool GetBool(Dictionary<string, JsonElement>? props, string key, bool defaultValue)
     {
-        if (props is null || !props.TryGetValue(key, out var el))
+        if (!TryGetProp(props, key, out var el))
             return defaultValue;
         return el.ValueKind switch
         {
@@ -205,7 +229,7 @@ public static class ShipCad
     private static bool TryGetGuid(Dictionary<string, JsonElement>? props, string key, out Guid id)
     {
         id = default;
-        if (props is null || !props.TryGetValue(key, out var el))
+        if (!TryGetProp(props, key, out var el))
             return false;
         var s = el.ValueKind == JsonValueKind.String ? el.GetString() : el.ToString();
         return Guid.TryParse(s, out id);
@@ -213,7 +237,7 @@ public static class ShipCad
 
     private static IReadOnlyList<Guid> GetGuidList(Dictionary<string, JsonElement>? props, string key)
     {
-        if (props is null || !props.TryGetValue(key, out var el) || el.ValueKind != JsonValueKind.Array)
+        if (!TryGetProp(props, key, out var el) || el.ValueKind != JsonValueKind.Array)
             return Array.Empty<Guid>();
         var list = new List<Guid>();
         foreach (var item in el.EnumerateArray())
