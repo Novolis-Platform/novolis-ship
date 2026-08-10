@@ -189,4 +189,30 @@ public sealed class ShipDesignTests
         var shared = CompartmentBoundaryResolver.FindSharedEdges(design);
         await Assert.That(shared.Count).IsGreaterThan(0);
     }
+
+    [Test]
+    public async Task Plan_snap_ortho_angle_and_candidates()
+    {
+        var ortho = ShipPlanPaths.ApplyOrtho(0f, 0f, 4.2f, 0.3f);
+        await Assert.That(ortho[0]).IsEqualTo(4.2f);
+        await Assert.That(ortho[1]).IsEqualTo(0f);
+        var ang = ShipPlanPaths.ApplyAngle15(0f, 0f, 10f, 0.1f);
+        await Assert.That(MathF.Abs(ang[1])).IsLessThan(0.05f);
+
+        var design = ShipFactory.Create(SampleDefinition());
+        var deck = design.Decks[1];
+        design = ShipDesignMutations.AddBulkheadPath(
+            design, deck.Id, "SnapWall", [[-4f, 0f], [4f, 0f]], 0.08f, 3f);
+        var candidates = ShipPlanPaths.CollectSnapCandidates(design, deck.Id);
+        await Assert.That(candidates.Any(c => c.Kind == ShipPlanPaths.PlanSnapKind.Vertex)).IsTrue();
+        await Assert.That(candidates.Any(c => c.Kind == ShipPlanPaths.PlanSnapKind.Midpoint)).IsTrue();
+        await Assert.That(ShipPlanPaths.TryNearestVertexOrMid(candidates, 4.05f, 0.1f, 0.5f, out var hit)).IsTrue();
+        await Assert.That(hit.Kind).IsEqualTo(ShipPlanPaths.PlanSnapKind.Vertex);
+        await Assert.That(ShipPlanPaths.TryNearestEdge(design, deck.Id, 0f, 0.2f, 0.5f, out var ex, out var ez, out _))
+            .IsTrue();
+        await Assert.That(MathF.Abs(ez)).IsLessThan(0.05f);
+        await Assert.That(MathF.Abs(ex)).IsLessThan(0.05f);
+        var guides = ShipPlanPaths.CollectAlignmentGuides(candidates, 4f, 1f, 0.1f, 50f);
+        await Assert.That(guides.Count).IsGreaterThan(0);
+    }
 }

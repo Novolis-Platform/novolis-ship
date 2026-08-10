@@ -158,6 +158,213 @@ public static class ShipPlanPaths
         return true;
     }
 
+    public enum PlanSnapKind
+    {
+        Vertex,
+        Midpoint,
+        Edge,
+    }
+
+    public readonly record struct PlanSnapCandidate(float X, float Z, PlanSnapKind Kind);
+
+    public readonly record struct PlanGuideLine(float Ax, float Az, float Bx, float Bz);
+
+    /// <summary>Vertices, segment midpoints, and edge samples for object snap on a deck.</summary>
+    public static List<PlanSnapCandidate> CollectSnapCandidates(ShipDesign design, DeckId deckId)
+    {
+        ArgumentNullException.ThrowIfNull(design);
+        var list = new List<PlanSnapCandidate>();
+        void AddPath(IReadOnlyList<float[]> path, bool closed)
+        {
+            if (path.Count == 0)
+                return;
+            var n = closed && path.Count > 1
+                    && MathF.Abs(path[0][0] - path[^1][0]) < 1e-4f
+                    && MathF.Abs(path[0][1] - path[^1][1]) < 1e-4f
+                ? path.Count - 1
+                : path.Count;
+            for (var i = 0; i < n; i++)
+                list.Add(new PlanSnapCandidate(path[i][0], path[i][1], PlanSnapKind.Vertex));
+            var segCount = closed ? n : path.Count - 1;
+            for (var i = 0; i < segCount; i++)
+            {
+                var a = path[i];
+                var b = path[(i + 1) % path.Count];
+                if (closed && i + 1 == n)
+                    b = path[0];
+                list.Add(new PlanSnapCandidate(
+                    (a[0] + b[0]) * 0.5f,
+                    (a[1] + b[1]) * 0.5f,
+                    PlanSnapKind.Midpoint));
+            }
+        }
+
+        foreach (var b in design.Bulkheads.Where(b => b.DeckId?.Value == deckId.Value || b.IsPrimary))
+            AddPath(ExtractPathXz(b.Geometry), closed: false);
+        foreach (var c in design.Compartments.Where(c => c.DeckId.Value == deckId.Value))
+            AddPath(ExtractPolygonXz(c.Geometry), closed: true);
+        foreach (var p in design.Passages.Where(p => p.DeckId.Value == deckId.Value))
+            AddPath(ExtractPathXz(p.Geometry), closed: false);
+        return list;
+    }
+
+    /// <summary>Closest point on any bulkhead/room/passage segment (edge snap).</summary>
+    public static bool TryNearestEdge(
+        ShipDesign design,
+        DeckId deckId,
+        float x,
+        float z,
+        float toleranceM,
+        out float edgeX,
+        out float edgeZ,
+        out float distance)
+    {
+        edgeX = x;
+        edgeZ = z;
+        distance = float.MaxValue;
+        ArgumentNullException.ThrowIfNull(design);
+        var bestD = float.MaxValue;
+        var bestX = x;
+        var bestZ = z;
+
+        void Consider(IReadOnlyList<float[]> path, bool closed)
+        {
+            if (path.Count < 2)
+                return;
+            var n = path.Count;
+            var segs = closed && MathF.Abs(path[0][0] - path[^1][0]) < 1e-4f && MathF.Abs(path[0][1] - path[^1][1]) < 1e-4f
+                ? n - 1
+                : (closed ? n : n - 1);
+            for (var i = 0; i < segs; i++)
+            {
+                var a = path[i];
+                var b = path[(i + 1) % n];
+                if (closed && i + 1 >= n)
+                    b = path[0];
+                var proj = ProjectOntoSegment(x, z, a[0], a[1], b[0], b[1]);
+                var d = MathF.Sqrt((x - proj[0]) * (x - proj[0]) + (z - proj[1]) * (z - proj[1]));
+                if (d < bestD)
+                {
+                    bestD = d;
+                    bestX = proj[0];
+                    bestZ = proj[1];
+                }
+            }
+        }
+
+        foreach (var b in design.Bulkheads.Where(b => b.DeckId?.Value == deckId.Value || b.IsPrimary))
+            Consider(ExtractPathXz(b.Geometry), closed: false);
+        foreach (var c in design.Compartments.Where(c => c.DeckId.Value == deckId.Value))
+            Consider(ExtractPolygonXz(c.Geometry), closed: true);
+        foreach (var p in design.Passages.Where(p => p.DeckId.Value == deckId.Value))
+            Consider(ExtractPathXz(p.Geometry), closed: false);
+
+        edgeX = bestX;
+        edgeZ = bestZ;
+        distance = bestD;
+        return bestD <= toleranceM;
+    }
+
+    public static float[] ProjectOntoSegment(float px, float pz, float ax, float az, float bx, float bz)
+    {
+        var dx = bx - ax;
+        var dz = bz - az;
+        var len2 = dx * dx + dz * dz;
+        if (len2 < 1e-12f)
+            return [ax, az];
+        var t = Clamp01(((px - ax) * dx + (pz - az) * dz) / len2);
+        return [ax + t * dx, az + t * dz];
+    }
+
+    /// <summary>Force horizontal or vertical from last point (nearer axis).</summary>
+    public static float[] ApplyOrtho(float lastX, float lastZ, float x, float z)
+    {
+        var dx = MathF.Abs(x - lastX);
+        var dz = MathF.Abs(z - lastZ);
+        return dx >= dz ? [x, lastZ] : [lastX, z];
+    }
+
+    /// <summary>Snap direction from last point to 15° increments.</summary>
+    public static float[] ApplyAngle15(float lastX, float lastZ, float x, float z)
+    {
+        var dx = x - lastX;
+        var dz = z - lastZ;
+        var len = MathF.Sqrt(dx * dx + dz * dz);
+        if (len < 1e-6f)
+            return [lastX, lastZ];
+        var ang = MathF.Atan2(dz, dx);
+        const float step = MathF.PI / 12f; // 15°
+        var snapped = MathF.Round(ang / step) * step;
+        return [lastX + MathF.Cos(snapped) * len, lastZ + MathF.Sin(snapped) * len];
+    }
+
+    public static bool TryNearestVertexOrMid(
+        IReadOnlyList<PlanSnapCandidate> candidates,
+        float x,
+        float z,
+        float toleranceM,
+        out PlanSnapCandidate hit)
+    {
+        hit = default;
+        var best = toleranceM;
+        var found = false;
+        // Prefer Vertex over Midpoint at equal distance.
+        foreach (var kind in new[] { PlanSnapKind.Vertex, PlanSnapKind.Midpoint })
+        {
+            foreach (var c in candidates)
+            {
+                if (c.Kind != kind)
+                    continue;
+                var d = MathF.Sqrt((c.X - x) * (c.X - x) + (c.Z - z) * (c.Z - z));
+                if (d <= best)
+                {
+                    best = d;
+                    hit = c;
+                    found = true;
+                }
+            }
+
+            if (found)
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>H/V alignment guides when cursor X or Z matches existing vertices.</summary>
+    public static List<PlanGuideLine> CollectAlignmentGuides(
+        IReadOnlyList<PlanSnapCandidate> candidates,
+        float x,
+        float z,
+        float toleranceM,
+        float extentM)
+    {
+        var guides = new List<PlanGuideLine>();
+        var matchedX = false;
+        var matchedZ = false;
+        foreach (var c in candidates)
+        {
+            if (c.Kind != PlanSnapKind.Vertex)
+                continue;
+            if (!matchedX && MathF.Abs(c.X - x) <= toleranceM)
+            {
+                guides.Add(new PlanGuideLine(c.X, -extentM, c.X, extentM));
+                matchedX = true;
+            }
+
+            if (!matchedZ && MathF.Abs(c.Z - z) <= toleranceM)
+            {
+                guides.Add(new PlanGuideLine(-extentM, c.Z, extentM, c.Z));
+                matchedZ = true;
+            }
+
+            if (matchedX && matchedZ)
+                break;
+        }
+
+        return guides;
+    }
+
     /// <summary>Normalized parameter of the closest point on a polyline (0..1).</summary>
     public static float NearestParameter(IReadOnlyList<float[]> pathXz, float x, float z)
     {
