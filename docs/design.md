@@ -8,9 +8,7 @@ Published docs: [https://novolis-platform.github.io/.github/novolis-ship/](https
 
 ```text
 Novolis.Math.Geometry
-
-Novolis.3D.Modeling
-Novolis.3D.Scene
+Novolis.ThreeD.Scene
 
 Novolis.Cad.Primitives
 Novolis.Cad.Evaluation
@@ -32,7 +30,7 @@ Novolis.Avalonia.Ship.Design
 ## Geometry architecture
 
 ```text
-Ship object → CadDocument → Cad.Evaluation → 3D.Modeling → Mesh → Analysis + 3D.Scene
+Ship object → CadDocument → Cad.Evaluation → Math.Geometry → Mesh → Analysis + ThreeD.Scene
 ```
 
 CAD is never rendered directly. Persist intent only; regenerate meshes and analysis caches.

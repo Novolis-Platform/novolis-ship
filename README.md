@@ -1,3 +1,22 @@
+<!-- novolis-package-index:start -->
+> **GitHub Packages shows this repository README on every package page** (upstream limitation).
+> Open the **package README** for install and quick start — embedded in each .nupkg and linked below.
+
+## Published packages
+
+| Package | Install | Package README |
+|---------|---------|----------------|
+| `Novolis.Ship.Analysis` | `dotnet add package Novolis.Ship.Analysis` | [README](https://github.com/Novolis-Platform/novolis-ship/blob/main/src/Novolis.Ship.Analysis/README.md) |
+| `Novolis.Ship.Design` | `dotnet add package Novolis.Ship.Design` | [README](https://github.com/Novolis-Platform/novolis-ship/blob/main/src/Novolis.Ship.Design/README.md) |
+| `Novolis.Ship.Primitives` | `dotnet add package Novolis.Ship.Primitives` | [README](https://github.com/Novolis-Platform/novolis-ship/blob/main/src/Novolis.Ship.Primitives/README.md) |
+| `Novolis.Ship.Structure` | `dotnet add package Novolis.Ship.Structure` | [README](https://github.com/Novolis-Platform/novolis-ship/blob/main/src/Novolis.Ship.Structure/README.md) |
+| `Novolis.Ship.Topology` | `dotnet add package Novolis.Ship.Topology` | [README](https://github.com/Novolis-Platform/novolis-ship/blob/main/src/Novolis.Ship.Topology/README.md) |
+| `Novolis.Ship.Validation` | `dotnet add package Novolis.Ship.Validation` | [README](https://github.com/Novolis-Platform/novolis-ship/blob/main/src/Novolis.Ship.Validation/README.md) |
+
+For NuGet.org and Visual Studio, the **embedded** README.md inside each package is authoritative.
+
+<!-- novolis-package-index:end -->
+
 <!-- novolis-marketing:start -->
 <p align="center">
   <a href="https://github.com/Novolis-Platform">
