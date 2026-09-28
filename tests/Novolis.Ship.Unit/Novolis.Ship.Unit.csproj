@@ -7,8 +7,8 @@
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" />
     <PackageReference Include="TUnit" />
-    <PackageReference Include="Novolis.Cad.Primitives" />
-    <PackageReference Include="Novolis.Math.Measure" />
+    <LibraryReference Include="Novolis.Cad.Primitives" />
+    <LibraryReference Include="Novolis.Math.Measure" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Novolis.Ship.Primitives/Novolis.Ship.Primitives.csproj" />

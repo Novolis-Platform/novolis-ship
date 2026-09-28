@@ -8,6 +8,6 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Novolis.Cad.Primitives" />
+    <LibraryReference Include="Novolis.Cad.Primitives" />
   </ItemGroup>
 </Project>
