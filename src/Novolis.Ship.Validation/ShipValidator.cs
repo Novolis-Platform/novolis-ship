@@ -4,25 +4,6 @@ using Novolis.Ship.Topology;
 
 namespace Novolis.Ship.Validation;
 
-public enum ShipValidationSeverity
-{
-    Info,
-    Warning,
-    Error,
-}
-
-public sealed record ShipValidationIssue(
-    string Code,
-    ShipValidationSeverity Severity,
-    string Message,
-    Guid? EntityId = null);
-
-public sealed class ShipValidationResult
-{
-    public required IReadOnlyList<ShipValidationIssue> Issues { get; init; }
-    public bool Ok => Issues.All(i => i.Severity != ShipValidationSeverity.Error);
-}
-
 /// <summary>Ship document validation rules.</summary>
 public static class ShipValidator
 {

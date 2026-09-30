@@ -3,23 +3,6 @@ using Novolis.Cad.Primitives;
 
 namespace Novolis.Ship.Primitives;
 
-/// <summary>Pressure-volume view over a <c>pressureVolume</c> entity.</summary>
-public sealed record PressureVolumeInfo(
-    Guid Id,
-    string? Name,
-    string AtmosphereClass,
-    float PressureKPa,
-    IReadOnlyList<Guid> MemberSpaceIds,
-    IReadOnlyList<Guid> HullEntityIds);
-
-/// <summary>Airlock pair view over an <c>airlock</c> entity.</summary>
-public sealed record AirlockInfo(
-    Guid Id,
-    string? Name,
-    Guid VestibuleSpaceId,
-    Guid OuterOpeningId,
-    Guid InnerOpeningId);
-
 /// <summary>Helpers to create and read ship semantic entities from Cad documents.</summary>
 public static class ShipCad
 {

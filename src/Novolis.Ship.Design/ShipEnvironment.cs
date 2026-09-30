@@ -1,18 +1,5 @@
 namespace Novolis.Ship.Design;
 
-public enum ExternalEnvironmentKind
-{
-    Vacuum = 0,
-    Atmosphere = 1,
-    Underwater = 2,
-}
-
-public enum GravitySystemKind
-{
-    None = 0,
-    Plating = 1,
-}
-
 /// <summary>Operating environment for a spacecraft design (persisted intent).</summary>
 public sealed record ShipEnvironment
 {

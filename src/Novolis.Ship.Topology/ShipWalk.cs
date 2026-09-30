@@ -5,22 +5,6 @@ using Math = System.Math;
 
 namespace Novolis.Ship.Topology;
 
-/// <summary>Portal between two spaces through an open hatch.</summary>
-public sealed record ShipWalkEdge(
-    Guid FromSpaceId,
-    Guid ToSpaceId,
-    Guid OpeningId,
-    Vector3 Portal,
-    string? OpeningName);
-
-/// <summary>Standing-eye waypoint for a walk tour.</summary>
-public sealed record ShipWalkWaypoint(
-    Vector3 Eye,
-    Vector3 Look,
-    Guid SpaceId,
-    Guid? OpeningId,
-    string Label);
-
 /// <summary>
 /// Walkable circulation: spaces linked by <b>open</b> hatches (not airtight topology).
 /// Waypoints stay inside space footprints so the eye does not pass through walls.
