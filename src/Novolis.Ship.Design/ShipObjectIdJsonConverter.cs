@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace Novolis.Ship.Design;
 
-file sealed class ShipObjectIdJsonConverter : JsonConverter<ShipObjectId>
+sealed class ShipObjectIdJsonConverter : JsonConverter<ShipObjectId>
 {
     public override ShipObjectId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
