@@ -8,7 +8,7 @@ Published docs: [https://novolis-platform.github.io/.github/novolis-ship/](https
 
 ```text
 Novolis.Math.Geometry
-Novolis.ThreeD.Scene
+Novolis.Modeling.Scene
 
 Novolis.Cad.Primitives
 Novolis.Cad.Evaluation
