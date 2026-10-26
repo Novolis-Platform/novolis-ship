@@ -32,4 +32,7 @@ public static class ShipPropertyKeys
     public const string StructureMaterial = "structure.material";
     public const string StructureBom = "structure.bom";
     public const string StructureMass = "structure.mass";
+    public const string FabReleaseManifest = "fab.release.manifest";
+    public const string FabReleasePackageId = "fab.release.packageId";
+    public const string FabPartId = "fabPartId";
 }
