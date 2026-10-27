@@ -1,11 +1,11 @@
 namespace Novolis.Ship.Structure;
 
-/// <summary>CAL-MFG-001 machine-readable manufacturing release.</summary>
+/// <summary>CAL-MFG-002 machine-readable manufacturing release.</summary>
 public sealed class FabReleaseManifest
 {
-    public string PackageId { get; init; } = "CAL-MFG-001";
+    public string PackageId { get; init; } = "CAL-MFG-002";
 
-    public string Revision { get; init; } = "001";
+    public string Revision { get; init; } = "002";
 
     public string GeneratedAtUtc { get; init; } = "";
 

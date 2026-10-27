@@ -12,4 +12,8 @@ public sealed class FabCutProfile
     public bool BendAllowed { get; init; }
 
     public float AreaM2 { get; init; }
+
+    public bool DevelopabilityPass { get; init; } = true;
+
+    public float EdgeClosureMaxDeltaM { get; init; }
 }
