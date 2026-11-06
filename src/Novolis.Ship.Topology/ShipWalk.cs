@@ -192,7 +192,80 @@ public static class ShipWalk
         if (hold is null)
             return [];
 
-        return BuildOpenHatchCoverTour(document, hold.Id, eyeHeight, stepMeters, startAtAft: true);
+        return BuildOpenHatchCoverTourDetailed(document, hold.Id, eyeHeight, stepMeters, startAtAft: true).Waypoints.ToList();
+    }
+
+    /// <summary>Distinct open interior hatch openings (walkable, non-vacuum).</summary>
+    public static int CountDistinctOpenInteriorHatches(CadDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        return BuildOpenEdges(document).Select(e => e.OpeningId).Distinct().Count();
+    }
+
+    /// <summary>Open hatch count where both connected spaces are reachable from any start space.</summary>
+    public static int CountReachableOpenInteriorHatches(CadDocument document, IEnumerable<Guid> startSpaceIds)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(startSpaceIds);
+        var edges = BuildOpenEdges(document);
+        if (edges.Count == 0)
+            return 0;
+
+        var reachable = new HashSet<Guid>();
+        var q = new Queue<Guid>();
+        foreach (var id in startSpaceIds)
+        {
+            if (reachable.Add(id))
+                q.Enqueue(id);
+        }
+
+        while (q.Count > 0)
+        {
+            var n = q.Dequeue();
+            foreach (var e in edges.Where(e => e.FromSpaceId == n))
+            {
+                if (reachable.Add(e.ToSpaceId))
+                    q.Enqueue(e.ToSpaceId);
+            }
+        }
+
+        return edges
+            .Where(e => reachable.Contains(e.FromSpaceId) && reachable.Contains(e.ToSpaceId))
+            .Select(e => e.OpeningId)
+            .Distinct()
+            .Count();
+    }
+
+    /// <summary>Greedy open-hatch tour from main deck port corridor (ops circulation spine).</summary>
+    public static ShipOpenHatchTour BuildCirculationTour(
+        CadDocument document,
+        float eyeHeight = DefaultEyeHeight,
+        float stepMeters = DefaultStepMeters)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        var corr = ShipCad.Spaces(document).FirstOrDefault(s =>
+                string.Equals(s.Name, "CORR_P", StringComparison.OrdinalIgnoreCase) && s.Deck == 0)
+            ?? ShipCad.Spaces(document).FirstOrDefault(s =>
+                string.Equals(s.Name, "CORR_P", StringComparison.OrdinalIgnoreCase));
+        if (corr is null)
+            return new ShipOpenHatchTour([], []);
+
+        return BuildOpenHatchCoverTourDetailed(document, corr.Id, eyeHeight, stepMeters, startAtAft: false);
+    }
+
+    public static int CountDistinctDecksOnTour(CadDocument document, IReadOnlyList<ShipWalkWaypoint> waypoints)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(waypoints);
+        var byId = document.Entities.ToDictionary(e => e.Id);
+        var decks = new HashSet<int>();
+        foreach (var wp in waypoints)
+        {
+            if (byId.TryGetValue(wp.SpaceId, out var ent))
+                decks.Add(ent.Deck);
+        }
+
+        return decks.Count;
     }
 
     /// <summary>
@@ -203,12 +276,23 @@ public static class ShipWalk
         Guid startSpaceId,
         float eyeHeight = DefaultEyeHeight,
         float stepMeters = DefaultStepMeters,
+        bool startAtAft = false) =>
+        BuildOpenHatchCoverTourDetailed(document, startSpaceId, eyeHeight, stepMeters, startAtAft).Waypoints.ToList();
+
+    /// <summary>
+    /// Cover every open hatch edge reachable from <paramref name="startSpaceId"/> (greedy nearest unused edge).
+    /// </summary>
+    public static ShipOpenHatchTour BuildOpenHatchCoverTourDetailed(
+        CadDocument document,
+        Guid startSpaceId,
+        float eyeHeight = DefaultEyeHeight,
+        float stepMeters = DefaultStepMeters,
         bool startAtAft = false)
     {
         ArgumentNullException.ThrowIfNull(document);
         var byId = document.Entities.ToDictionary(e => e.Id);
         if (!byId.TryGetValue(startSpaceId, out var startSpace))
-            return [];
+            return new ShipOpenHatchTour([], []);
 
         var allEdges = BuildOpenEdges(document);
         var undirected = new HashSet<Guid>();
@@ -289,7 +373,7 @@ public static class ShipWalk
                 AppendCorridorStroll(waypoints, corr, eyeHeight, stepMeters);
         }
 
-        return waypoints;
+        return new ShipOpenHatchTour(waypoints, visitedOpenings);
     }
 
     private static bool TryFindNearestUnused(
