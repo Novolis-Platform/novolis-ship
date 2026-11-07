@@ -2,7 +2,7 @@
   <PropertyGroup>
     <PackageId>Novolis.Ship.Structure</PackageId>
     <IsPackable>true</IsPackable>
-    <Description>Ship structural plate BOM/mass rollup and primary structure CadDocument builders (hull, decks, frames, longitudinals, bulkheads).</Description>
+    <Description>Ship structural plate BOM/mass rollup, primary structure CadDocument builders, and generic fabrication helpers (DXF polyline write, sheet nest, hull-face unfold).</Description>
     <RootNamespace>Novolis.Ship.Structure</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);CS1591</NoWarn>
